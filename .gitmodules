@@ -1,0 +1,9 @@
+[submodule "klee"]
+	path = klee
+	url = https://github.com/klee/klee
+[submodule "klee-uclibc"]
+	path = klee-uclibc
+	url = https://github.com/klee/klee-uclibc
+[submodule "klee-float"]
+	path = klee-float
+	url = https://github.com/sjudson/klee-float

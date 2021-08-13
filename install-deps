@@ -1,0 +1,109 @@
+#!/bin/bash
+
+# cleanup
+if [ -d './build' ]
+then
+    rm -rf ./build
+fi
+mkdir ./build
+
+# klee: top level folders
+cd ./klee
+ksip="$(pwd)"
+cd ..
+
+cd ./klee-uclibc
+ksucip="$(pwd)"
+cd ..
+
+mkdir ./build/libc++
+cd ./build/libc++
+cppip="$(pwd)"
+cd ../..
+
+# configure uClibc and POSIX ()
+uname="$(uname -s)"
+case "${uname}" in
+    Linux*)     machine=0;;
+    *)          machine=1;;
+esac
+
+command -v "clang-9" &> /dev/null
+
+if [[ $? -eq 0 ]]
+then
+    cc="$(command -v 'clang-9')"
+    cpp="$(command -v 'clang++-9')"
+    lc="$(command -v 'llvm-config-9')"
+else
+    cc="$(command -v 'clang')"
+    cpp="$(command -v 'clang++')"
+    lc="$(command -v 'llvm-config')"
+fi
+
+if [[ $machine -eq 0 ]]
+then
+    cd ./klee-uclibc
+    ./configure --make-llvm-lib --with-cc=$cc  --with-llvm-config=$lc
+    make -j2
+    cd ..
+else
+    echo "Unable to configure uClibc and POSIX compatibility..."
+fi
+
+# klee: build libc++
+cd ./klee
+export LLVM_VERSION=9
+export SANITIZER_BUILD=
+export BASE=$cppip
+export REQUIRES_RTTI=1
+export DISABLE_ASSERTIONS=1
+export ENABLE_DEBUG=0
+export ENABLE_OPTIMIZED=1
+./scripts/build/build.sh libcxx
+cd ..
+
+# klee: configure klee
+if [ -d './klee/build' ]
+then
+    rm -rf ./klee/build
+fi
+mkdir ./klee/build
+
+cd ./klee/build
+#export CXXFLAGS='-D_GLIBCXX_USE_CXX11_ABI=0'
+if [[ $machine -eq 0 ]]
+then
+    cmake \
+        -DENABLE_SOLVER_Z3=ON \
+        -DENABLE_POSIX_RUNTIME=ON \
+        -DENABLE_KLEE_UCLIBC=ON \
+        -DKLEE_UCLIBC_PATH=$ksucip \
+        -DENABLE_KLEE_LIBCXX=ON \
+        -DKLEE_LIBCXX_DIR=$cppip/libc++-install-90/ \
+        -DKLEE_LIBCXX_INCLUDE_DIR=$cppip/libc++-install-90/include/c++/v1/ \
+        -DENABLE_KLEE_EH_CXX=ON \
+        -DKLEE_LIBCXXABI_SRC_DIR=$cppip/llvm-90/libcxxabi/ \
+        -DENABLE_UNIT_TESTS=OFF \
+        -DENABLE_SYSTEM_TESTS=OFF \
+        -DLLVM_CONFIG_BINARY=$lc \
+        -DLLVMCC=$cc \
+        -DLLVMCXX=$cpp \
+        $ksip
+else
+    cmake \
+        -DENABLE_SOLVER_Z3=ON \
+        -DENABLE_KLEE_LIBCXX=ON \
+        -DKLEE_LIBCXX_DIR=$cppip/libc++-install-90/ \
+        -DKLEE_LIBCXX_INCLUDE_DIR=$cppip/libc++-install-90/include/c++/v1/ \
+        -DENABLE_KLEE_EH_CXX=ON \
+        -DKLEE_LIBCXXABI_SRC_DIR=$cppip/llvm-9/libcxxabi/ \
+        -DENABLE_UNIT_TESTS=OFF \
+        -DENABLE_SYSTEM_TESTS=OFF \
+        -DLLVM_CONFIG_BINARY=$lc \
+        -DLLVMCC=$cc \
+        -DLLVMCXX=$cpp \
+        $ksip
+fi
+
+make
