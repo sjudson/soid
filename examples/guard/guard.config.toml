@@ -1,0 +1,4 @@
+title = "Customs Guard Configuration"
+
+[build]
+makefile = "./Makefile"
