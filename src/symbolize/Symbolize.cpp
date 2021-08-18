@@ -2,19 +2,16 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
-
 using namespace llvm;
-
-static cl::opt<std::string> QF{ "qir", cl::desc( "Specify filename for query LLVM IR" ), cl::value_desc( "filename" ) };
 
 
 void symbolize( Function &F, DomTreeNodeBase<BasicBlock> *Root ) {
@@ -27,12 +24,13 @@ void symbolize( Function &F, DomTreeNodeBase<BasicBlock> *Root ) {
   DILocalVariable *dbgVar;
 
   Use *op;
-  StringRef n, vn;
+  StringRef n;
 
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
 
-      // GET DEBUG INFO FOR INSTRUCTION //
+      /* GET DEBUG INFO FOR INSTRUCTION */
+
       dbgVar = nullptr;
 
       // for higher optimization levels
@@ -43,6 +41,8 @@ void symbolize( Function &F, DomTreeNodeBase<BasicBlock> *Root ) {
 
       n = ( dbgVar ) ? dbgVar->getName() : "n/a";
       errs() << I << "\n\tname := " << n << "\n\tops  := ";
+
+      /* GET INSTRUCTION OPERANDS */
 
       op = I.op_begin();
       while ( op ) {
@@ -60,19 +60,23 @@ void symbolize( Function &F, DomTreeNodeBase<BasicBlock> *Root ) {
 
 
 struct Symbolize : PassInfoMixin<Symbolize> {
-  static LLVMContext  Ctx;
-  static SMDiagnostic Err;
+  SMDiagnostic Err;
   std::unique_ptr<Module> Query = nullptr;
 
+  // since we can't take cmdline args with the new pass manager
+  // we will need to hardcode in the location of the query code
+  //
+  // this should not be a problem since it'll be produced by an
+  // automated pipeline...
+  std::string QueryFile = "../query.ll";
+
   PreservedAnalyses run( Function &F, FunctionAnalysisManager &FAM );
-  void loadQuery();
+  void loadQuery( LLVMContext &Ctx );
 };
 
 
 PreservedAnalyses Symbolize::run ( Function &F, FunctionAnalysisManager &FAM ) {
-  // TODO: FIXUP
-  QF = "./query.ll";
-  if ( !Symbolize::Query ) loadQuery();
+  if ( !Symbolize::Query ) loadQuery( F.getContext() );
 
   DominatorTree *DT = &FAM.getResult<DominatorTreeAnalysis>( F );
   symbolize( F, DT->getRootNode() );
@@ -81,7 +85,7 @@ PreservedAnalyses Symbolize::run ( Function &F, FunctionAnalysisManager &FAM ) {
 }
 
 
-void Symbolize::loadQuery() { Symbolize::Query = parseIRFile( QF, Symbolize::Err, Symbolize::Ctx ); }
+void Symbolize::loadQuery( LLVMContext &Ctx ) { Symbolize::Query = parseIRFile( Symbolize::QueryFile, Symbolize::Err, Ctx ); }
 
 
 /****************************
