@@ -7,3 +7,6 @@
 [submodule "klee-float"]
 	path = klee-float
 	url = https://github.com/sjudson/klee-float
+[submodule "tomlplusplus"]
+	path = tomlplusplus
+	url = https://github.com/marzer/tomlplusplus

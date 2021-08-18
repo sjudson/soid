@@ -9,7 +9,11 @@ find_package(LLVM REQUIRED CONFIG)
 
 include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
 
-set(CMAKE_CXX_STANDARD 14 CACHE STRING "")
+include_directories("../../tomlplusplus/include/")
+
+set(CMAKE_CXX_STANDARD 17 CACHE STRING "")
+
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(NOT LLVM_ENABLE_RTTI)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")

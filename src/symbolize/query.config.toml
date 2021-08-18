@@ -1,0 +1,15 @@
+title = "Query Configuration"
+
+[headers]
+type = 0
+typeDesc = "verify"
+inputConstraintsFile = "../query.ll"
+
+[environmental]
+vars = [ "start", "close", "heat", "error" ]
+
+[state]
+vars = [ "started" ]
+
+[program]
+allow = [ "decision" ]
