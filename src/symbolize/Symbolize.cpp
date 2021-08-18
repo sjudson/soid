@@ -30,51 +30,6 @@ struct Configuration {
 };
 
 
-void symbolize( Function &F, DomTreeNodeBase<BasicBlock> *Root ) {
-
-  errs() << "Function: "<< F.getName() << "\n";
-  errs() << "\tnumber of arguments: " << F.arg_size() << "\n";
-
-  DbgDeclareInst  *dbgDec;
-  DbgValueInst    *dbgVal;
-  DILocalVariable *dbgVar;
-
-  Use *op;
-  StringRef n;
-
-  for (BasicBlock &BB : F) {
-    for (Instruction &I : BB) {
-
-      /* GET DEBUG INFO FOR INSTRUCTION */
-
-      dbgVar = nullptr;
-
-      // for higher optimization levels
-      if ( dbgDec = dyn_cast<DbgDeclareInst>( &I ) ) dbgVar = dbgDec->getVariable();
-
-      // for lower optimization levels
-      if ( dbgVal = dyn_cast<DbgValueInst>( &I ) ) dbgVar = dbgVal->getVariable();
-
-      n = ( dbgVar ) ? dbgVar->getName() : "n/a";
-      errs() << I << "\n\tname := " << n << "\n\tops  := ";
-
-      /* GET INSTRUCTION OPERANDS */
-
-      op = I.op_begin();
-      while ( op ) {
-        if ( op != I.op_begin() ) errs() << " : ";
-
-        Value *v = op->get();
-        v->printAsOperand( errs(), true );
-
-        op = op->getNext();
-      }
-      errs() << "\n\n";
-    }
-  }
-}
-
-
 struct Symbolize : PassInfoMixin<Symbolize> {
   // since we can't take cmdline args with the new pass manager
   // we will need to hardcode in the location of the query code
@@ -87,23 +42,12 @@ struct Symbolize : PassInfoMixin<Symbolize> {
   SMDiagnostic Err;
   std::unique_ptr<Module> Query;
 
-  PreservedAnalyses run( Function &F, FunctionAnalysisManager &FAM );
   void parseConfig();
   void loadQuery( LLVMContext &Ctx );
+  void transferGlobals( Module &M );
+  void symbolize( Function &F );
+  PreservedAnalyses run( llvm::Module &M, llvm::ModuleAnalysisManager &MAM );
 };
-
-
-PreservedAnalyses Symbolize::run ( Function &F, FunctionAnalysisManager &FAM ) {
-  if ( !Symbolize::Query ) { // todo: make sure this actually only runs once
-    parseConfig();
-    loadQuery( F.getContext() );
-  }
-
-  DominatorTree *DT = &FAM.getResult<DominatorTreeAnalysis>( F );
-  symbolize( F, DT->getRootNode() );
-
-  return PreservedAnalyses::none();
-}
 
 
 void Symbolize::parseConfig() {
@@ -148,6 +92,78 @@ void Symbolize::parseConfig() {
 void Symbolize::loadQuery( LLVMContext &Ctx ) { Symbolize::Query = parseIRFile( Symbolize::Config.QueryFile, Symbolize::Err, Ctx ); }
 
 
+void Symbolize::transferGlobals( Module &M ) {
+
+  int mark = 0;
+  Constant *StrVar;
+  for ( GlobalVariable &g : Symbolize::Query->getGlobalList() ) {
+    StrVar = M.getOrInsertGlobal( "str" + mark, g.getType(), [&](){ return &g; } );
+    dyn_cast<GlobalVariable>( StrVar )->setInitializer( g.getInitializer() );
+
+    mark++;
+  }
+
+  return;
+}
+
+
+void Symbolize::symbolize( Function &F ) {
+
+  //errs() << "Function: " << F.getName() << "\n";
+  //errs() << "\tnumber of arguments: " << F.arg_size() << "\n";
+
+  DbgDeclareInst  *dbgDec;
+  DbgValueInst    *dbgVal;
+  DILocalVariable *dbgVar;
+
+  Use *op;
+  StringRef n;
+
+  for (BasicBlock &BB : F) {
+    for (Instruction &I : BB) {
+
+      /* GET DEBUG INFO FOR INSTRUCTION */
+
+      dbgVar = nullptr;
+
+      // for higher optimization levels
+      if ( dbgDec = dyn_cast<DbgDeclareInst>( &I ) ) dbgVar = dbgDec->getVariable();
+
+      // for lower optimization levels
+      if ( dbgVal = dyn_cast<DbgValueInst>( &I ) ) dbgVar = dbgVal->getVariable();
+
+      n = ( dbgVar ) ? dbgVar->getName() : "n/a";
+      //errs() << I << "\n\tname := " << n << "\n\tops  := ";
+
+      /* GET INSTRUCTION OPERANDS */
+
+      op = I.op_begin();
+      while ( op ) {
+        //if ( op != I.op_begin() ) errs() << " : ";
+
+        Value *v = op->get();
+        //v->printAsOperand( errs(), true );
+
+        op = op->getNext();
+      }
+      //errs() << "\n\n";
+    }
+  }
+}
+
+
+PreservedAnalyses Symbolize::run( llvm::Module &M, llvm::ModuleAnalysisManager &MAM ) {
+  parseConfig();
+  loadQuery( M.getContext() );
+
+  transferGlobals( M );
+
+  for ( Function &F : M ) symbolize( F );
+
+  return PreservedAnalyses::none();
+}
+
+
 
 /****************************
  * LOAD PLUGIN INTO MANAGER *
@@ -158,10 +174,10 @@ llvm::PassPluginLibraryInfo getSymbolizePluginInfo() {
   return { LLVM_PLUGIN_API_VERSION, "Symbolize", LLVM_VERSION_STRING,
            []( PassBuilder &PB ) {
              PB.registerPipelineParsingCallback(
-                []( StringRef Name, FunctionPassManager &FPM,
+                 []( StringRef Name, ModulePassManager &MPM,
                     ArrayRef<PassBuilder::PipelineElement> ) {
                   if ( Name == "symbolize" ) {
-                    FPM.addPass( Symbolize() );
+                    MPM.addPass( Symbolize() );
                     return true;
                   }
                   return false;
