@@ -96,10 +96,6 @@ void Symbolize::transferGlobals( Module &M ) {
 
   std::string n;
 
-  std::string type_str1, type_str2;
-  raw_string_ostream rso1(type_str1);
-  raw_string_ostream rso2(type_str2);
-
   // todo: name sure no name clashes if preexisting anonymous global strings
   int mark = 0;
   for ( GlobalVariable &g : Symbolize::Query->getGlobalList() ) {
