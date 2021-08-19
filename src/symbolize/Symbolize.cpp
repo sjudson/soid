@@ -94,13 +94,22 @@ void Symbolize::loadQuery( LLVMContext &Ctx ) { Symbolize::Query = parseIRFile( 
 
 void Symbolize::transferGlobals( Module &M ) {
 
-  int mark = 0;
-  Constant *StrVar;
-  for ( GlobalVariable &g : Symbolize::Query->getGlobalList() ) {
-    StrVar = M.getOrInsertGlobal( "str" + mark, g.getType(), [&](){ return &g; } );
-    dyn_cast<GlobalVariable>( StrVar )->setInitializer( g.getInitializer() );
+  std::string n;
 
-    mark++;
+  std::string type_str1, type_str2;
+  raw_string_ostream rso1(type_str1);
+  raw_string_ostream rso2(type_str2);
+
+  // todo: name sure no name clashes if preexisting anonymous global strings
+  int mark = 0;
+  for ( GlobalVariable &g : Symbolize::Query->getGlobalList() ) {
+    n = ".str" + ( ( mark++ ) ? "." + std::to_string( mark ) : "" );
+    M.getOrInsertGlobal( n, g.getValueType(),
+                         [&](){
+                           GlobalVariable *ng = new GlobalVariable( M, g.getValueType(), g.isConstant(), GlobalValue::PrivateLinkage, g.getInitializer(), n );
+                           ng->setUnnamedAddr( GlobalValue::UnnamedAddr::Global );
+                           return ng;
+                         });
   }
 
   return;
