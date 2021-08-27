@@ -167,7 +167,7 @@ void Symbolize::loadQuery( LLVMContext &Ctx ) { Symbolize::Query = parseIRFile( 
 
 void Symbolize::transferGlobals( Module &M, Context *Ctx ) {
 
-  std::string n;
+  std::string name;
 
   int in  = 0;
   int out = -1;
@@ -177,11 +177,11 @@ void Symbolize::transferGlobals( Module &M, Context *Ctx ) {
 
     while( !placed ) {
       out++;
-      n = ".str" + ( ( out ) ? "." + std::to_string( out ) : "" );
+      name = ".str" + ( ( out ) ? "." + std::to_string( out ) : "" );
 
-      M.getOrInsertGlobal( n, g.getValueType(),
+      M.getOrInsertGlobal( name, g.getValueType(),
                            [&](){
-                             GlobalVariable *ng = new GlobalVariable( M, g.getValueType(), g.isConstant(), GlobalValue::PrivateLinkage, g.getInitializer(), n );
+                             GlobalVariable *ng = new GlobalVariable( M, g.getValueType(), g.isConstant(), GlobalValue::PrivateLinkage, g.getInitializer(), name );
                              ng->setUnnamedAddr( GlobalValue::UnnamedAddr::Global );
                              placed = true;
                              return ng;
@@ -297,11 +297,11 @@ void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
   FunctionCallee _klee_make_symbolic, _klee_assume;
   Function *klee_make_symbolic, *klee_assume;
 
-  _klee_make_symbolic = M.getOrInsertFunction( "klee_make_symbolic", _klee_make_symbolic->getFunctionType(), _klee_make_symbolic->getAttributes() );
+  _klee_make_symbolic = M.getOrInsertFunction( "klee_make_symbolic", __klee_make_symbolic->getFunctionType(), __klee_make_symbolic->getAttributes() );
   klee_make_symbolic  = dyn_cast<Function>( _klee_make_symbolic.getCallee() );
 
   if ( __klee_assume ) {
-    _klee_assume = M.getOrInsertFunction( "klee_assume", _klee_assume->getFunctionType(), _klee_assume->getAttributes() );
+    _klee_assume = M.getOrInsertFunction( "klee_assume", __klee_assume->getFunctionType(), __klee_assume->getAttributes() );
     klee_assume  = dyn_cast<Function>( _klee_assume.getCallee() );
   }
 
