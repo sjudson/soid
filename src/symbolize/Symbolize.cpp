@@ -46,9 +46,10 @@ bool isin_vars( std::string s, std::set<std::string> ss ) { return ss.find( s ) 
 
 
 struct Context {
-  std::map<int, int> renamed;
+  std::map<std::string, GlobalVariable*> renamed;
   std::map<std::string, Location*> ilocs;
   std::map<std::string, Location*> plocs;
+
 };
 bool isin_locs( std::string s, std::map<std::string, Location*> ms ) { return ms.find( s ) != ms.end(); }
 
@@ -172,6 +173,9 @@ void Symbolize::transferGlobals( Module &M, Context *Ctx ) {
   int in  = 0;
   int out = -1;
   bool placed;
+
+  Constant *c;
+
   for ( GlobalVariable &g : Symbolize::Query->getGlobalList() ) {
     placed = false;
 
@@ -179,7 +183,7 @@ void Symbolize::transferGlobals( Module &M, Context *Ctx ) {
       out++;
       name = ".str" + ( ( out ) ? "." + std::to_string( out ) : "" );
 
-      M.getOrInsertGlobal( name, g.getValueType(),
+      c = M.getOrInsertGlobal( name, g.getValueType(),
                            [&](){
                              GlobalVariable *ng = new GlobalVariable( M, g.getValueType(), g.isConstant(), GlobalValue::PrivateLinkage, g.getInitializer(), name );
                              ng->setUnnamedAddr( GlobalValue::UnnamedAddr::Global );
@@ -188,7 +192,7 @@ void Symbolize::transferGlobals( Module &M, Context *Ctx ) {
                            });
     }
 
-    Ctx->renamed[ in ] = out;
+    Ctx->renamed[ g.getName() ] = cast<GlobalVariable>( c );
     in++;
   }
 
@@ -207,18 +211,14 @@ void Symbolize::findVariables( Module &M, Context *Ctx ) {
     const std::vector<CallGraphNode*> &ns = *vs;
 
     for ( std::vector<CallGraphNode*>::const_iterator n = ns.begin(), ne = ns.end(); n != ne; ++n ) {
-      F = (*n)->getFunction();
+      F = ( *n )->getFunction();
 
       if ( !F ) continue; // todo: explore why this is necessary
-
-      //errs() << "\tFunction: " << F->getName() << "\n";
-      //errs() << "\t\tnumber of arguments: " << F->arg_size() << "\n";
 
       DbgDeclareInst  *dbgDec;
       DbgValueInst    *dbgVal;
       DILocalVariable *dbgVar;
 
-      Use *op;
       StringRef name;
       std::string sname;
 
@@ -259,7 +259,7 @@ void Symbolize::findVariables( Module &M, Context *Ctx ) {
 
             while ( true ) {
               sname = name.str() + std::to_string( mark );
-              if ( isin_locs( name, Ctx->plocs ) ) { mark++; continue; }
+              if ( isin_locs( sname, Ctx->plocs ) ) { mark++; continue; }
 
               Ctx->plocs[ sname ] = new Location();
               Ctx->plocs[ sname ]->_scc = -1;
@@ -298,12 +298,11 @@ void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
   Function *klee_make_symbolic, *klee_assume;
 
   _klee_make_symbolic = M.getOrInsertFunction( "klee_make_symbolic", __klee_make_symbolic->getFunctionType(), __klee_make_symbolic->getAttributes() );
-  klee_make_symbolic  = dyn_cast<Function>( _klee_make_symbolic.getCallee() );
+  klee_make_symbolic  = cast<Function>( _klee_make_symbolic.getCallee() );
 
-  if ( __klee_assume ) {
-    _klee_assume = M.getOrInsertFunction( "klee_assume", __klee_assume->getFunctionType(), __klee_assume->getAttributes() );
-    klee_assume  = dyn_cast<Function>( _klee_assume.getCallee() );
-  }
+  // todo: figure out if klee_assume may not exist (do we just e.g. force it with klee_assume( true ) in the header?)
+  _klee_assume = M.getOrInsertFunction( "klee_assume", __klee_assume->getFunctionType(), __klee_assume->getAttributes() );
+  klee_assume  = cast<Function>( _klee_assume.getCallee() );
 
   for ( Function &F : *Symbolize::Query ) {
     for ( BasicBlock &BB : F ) {
@@ -314,41 +313,45 @@ void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
         if ( !called ) continue; // todo: explore why this is necessary
         name = called->getName();
 
-        if ( make = ( name != "klee_assume" ) && name != "klee_make_symbolic" ) continue;
+        //// XXXXXXXXXXXX
+        ///names[ XXX ] = YYY;
+
+        if ( ( make = ( name != "klee_assume" ) ) && name != "klee_make_symbolic" ) continue;
 
         if ( make ) {
 
+          IRBuilder<> Builder( &I );
 
+          errs() << "\n";
 
+          // map variable
+          /* XXXXXXXXX
+          Value *nvop, *vop = I.getOperand( 0 );
+          nvop = ( isin_locs( names[ vop ], Ctx->ilocs ) )
+            ? cast<Value>( Ctx->ilocs[ names[ vop ] ]->I )
+            : cast<Value>( Ctx->plocs[ names[ vop ] ]->I );
 
+          Value *nvptr = Builder.CreateIntToPtr( nvop, vop->getType(), nvop->getName() + "_ptr" );
+          */
 
+          // map size
+          Value *nsop, *sop = I.getOperand( 1 );
+          ConstantInt *cint = ConstantInt::get( M.getContext(), cast<ConstantInt>( sop )->getValue() );
+          nsop = cast<Value>( cint );
+
+          // map name
+          // todo: handle case where name isn't a global variable
+          Value *nnop, *nop = cast<GEPOperator>( I.getOperand( 2 ) )->getPointerOperand();
+          GlobalVariable *nref = Ctx->renamed[ nop->getName() ];
+          nnop = cast<Value>( nref );
+
+          Builder.CreateCall( _klee_make_symbolic, { nvptr, nsop, nnop } );
         } else {
-
-
-
-
         }
       }
     }
   }
 }
-
-
-/*
-//errs() << I << "\n\tname := " << name << "\n\tops  := ";
-
-
-op = I.op_begin();
-while ( op ) {
-//if ( op != I.op_begin() ) errs() << " : ";
-
-Value *v = op->get();
-//v->printAsOperand( errs() );
-
-op = op->getNext();
-}
-//errs() << "\n\n";
-*/
 
 
 PreservedAnalyses Symbolize::run( Module &M, ModuleAnalysisManager &MAM ) {
