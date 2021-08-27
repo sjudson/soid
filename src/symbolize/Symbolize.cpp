@@ -23,10 +23,12 @@ using namespace llvm;
 
 
 struct Location {
-  int scc;
-  std::string func;
-  int bb;
-  int instr;
+  int _scc;
+
+  Function *F;
+  BasicBlock *BB;
+  Instruction *I;
+  DILocalScope *S;
 };
 
 
@@ -40,14 +42,15 @@ struct Configuration {
   std::set<std::string> I; // all input variables
   std::set<std::string> V; // all variables
 };
-bool isin_set( std::string s, std::set<std::string> ss ) { return ss.find( s ) != ss.end(); }
+bool isin_vars( std::string s, std::set<std::string> ss ) { return ss.find( s ) != ss.end(); }
 
 
 struct Context {
   std::map<int, int> renamed;
-  std::map<std::string, Location*> locations;
+  std::map<std::string, Location*> ilocs;
+  std::map<std::string, Location*> plocs;
 };
-bool isin_map( std::string s, std::map<std::string, Location*> ms ) { return ms.find( s ) != ms.end(); }
+bool isin_locs( std::string s, std::map<std::string, Location*> ms ) { return ms.find( s ) != ms.end(); }
 
 
 struct Symbolize : PassInfoMixin<Symbolize> {
@@ -66,8 +69,9 @@ struct Symbolize : PassInfoMixin<Symbolize> {
   void parseError( int eno );
   void loadQuery( LLVMContext &Ctx );
   void transferGlobals( Module &M, Context *Ctx );
+  void findVariables( Module &M, Context *Ctx );
   void transferSymbolics( Module &M, Context *Ctx );
-  void symbolize( Function &F );
+  void symbolizeProgram( Module &M, Context *Ctx );
   PreservedAnalyses run( Module &M, ModuleAnalysisManager &MAM );
 };
 
@@ -183,6 +187,7 @@ void Symbolize::transferGlobals( Module &M, Context *Ctx ) {
                              return ng;
                            });
     }
+
     Ctx->renamed[ in ] = out;
     in++;
   }
@@ -191,7 +196,7 @@ void Symbolize::transferGlobals( Module &M, Context *Ctx ) {
 }
 
 
-void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
+void Symbolize::findVariables( Module &M, Context *Ctx ) {
 
   CallGraph cg = CallGraph( M );
 
@@ -204,7 +209,7 @@ void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
     for ( std::vector<CallGraphNode*>::const_iterator n = ns.begin(), ne = ns.end(); n != ne; ++n ) {
       F = (*n)->getFunction();
 
-      if ( !F ) continue; // todo: explore implications
+      if ( !F ) continue; // todo: explore why this is necessary
 
       //errs() << "\tFunction: " << F->getName() << "\n";
       //errs() << "\t\tnumber of arguments: " << F->arg_size() << "\n";
@@ -215,53 +220,58 @@ void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
 
       Use *op;
       StringRef name;
-
-      int bi = 0;
-      int ii = 0;
+      std::string sname;
 
       for ( BasicBlock &BB : *F ) {
         for ( Instruction &I : BB ) {
 
           dbgVar = nullptr;
 
-          if ( dbgDec = dyn_cast<DbgDeclareInst>( &I ) ) dbgVar = dbgDec->getVariable();  // for higher optimization levels
-          if ( dbgVal = dyn_cast<DbgValueInst>( &I ) )   dbgVar = dbgVal->getVariable();  // for lower optimization levels
+          // which of these exists depends on optimization level
+          if ( dbgDec = dyn_cast<DbgDeclareInst>( &I ) ) dbgVar = dbgDec->getVariable();
+          if ( dbgVal = dyn_cast<DbgValueInst>( &I ) )   dbgVar = dbgVal->getVariable();
           if ( !dbgVar ) continue;
 
-          // todo: handle denylist case
           name = dbgVar->getName();
-          if ( isin_set( name, Symbolize::Config.V ) ) {
+
+          // handle input vars
+          if ( isin_vars( name, Symbolize::Config.I ) ) {
             // if we already know of a location by the same name in the same SCC, error to prevent issues resolving loops
             // nb: there are cases that aren't ambiguous we fail on with this, we should make it more precise if possible
-            if ( isin_map( name, Ctx->locations ) && Ctx->locations[ name ]->scc == si ) {
+            if ( isin_locs( name, Ctx->ilocs ) && Ctx->ilocs[ name ]->_scc == si ) {
               errs() << "\nCannot resolve first declaration of " << name << ", ambiguous input to symbolize.\n\n";
               exit( 1 );
             }
 
-            Ctx->locations[ name ] = new Location();
-            Ctx->locations[ name ]->scc   = si;
-            Ctx->locations[ name ]->func  = F->getName();
-            Ctx->locations[ name ]->bb    = bi;
-            Ctx->locations[ name ]->instr = ii;
+            Ctx->ilocs[ name ] = new Location();
+            Ctx->ilocs[ name ]->_scc = si;
+
+            Ctx->ilocs[ name ]->F  = F;
+            Ctx->ilocs[ name ]->BB = &BB;
+            Ctx->ilocs[ name ]->I  = &I;
+            Ctx->ilocs[ name ]->S  = dbgVar->getScope();
           }
 
-          //errs() << I << "\n\tname := " << name << "\n\tops  := ";
+          // handle program vars
+          int mark = 0;
+          bool in_vars = isin_vars( name, Symbolize::Config.P );
+          if ( ( Symbolize::Config.allow && in_vars ) || ( !Symbolize::Config.allow && !in_vars ) ) {
 
-          /* GET INSTRUCTION OPERANDS */
+            while ( true ) {
+              sname = name.str() + std::to_string( mark );
+              if ( isin_locs( name, Ctx->plocs ) ) { mark++; continue; }
 
-          op = I.op_begin();
-          while ( op ) {
-            //if ( op != I.op_begin() ) errs() << " : ";
+              Ctx->plocs[ sname ] = new Location();
+              Ctx->plocs[ sname ]->_scc = -1;
 
-            Value *v = op->get();
-            //v->printAsOperand( errs() );
-
-            op = op->getNext();
+              Ctx->plocs[ sname ]->F  = F;
+              Ctx->plocs[ sname ]->BB = &BB;
+              Ctx->plocs[ sname ]->I  = &I;
+              Ctx->plocs[ sname ]->S  = dbgVar->getScope();
+              break;
+            }
           }
-          //errs() << "\n\n";
-          ii++;
         }
-        bi++;
       }
     }
     si++;
@@ -269,19 +279,87 @@ void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
 }
 
 
-void Symbolize::symbolize( Function &F ) {}
+void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
+
+  StringRef name;
+  bool make;
+
+  CallInst *CI;
+
+  Function *__klee_make_symbolic = Symbolize::Query->getFunction( "klee_make_symbolic" );
+  Function *__klee_assume        = Symbolize::Query->getFunction( "klee_assume" );
+
+  if ( !__klee_make_symbolic ) {
+    errs() << "Cannot find any symbolic variables in query file.\n\n";
+    exit( 1 );
+  }
+
+  FunctionCallee _klee_make_symbolic, _klee_assume;
+  Function *klee_make_symbolic, *klee_assume;
+
+  _klee_make_symbolic = M.getOrInsertFunction( "klee_make_symbolic", _klee_make_symbolic->getFunctionType(), _klee_make_symbolic->getAttributes() );
+  klee_make_symbolic  = dyn_cast<Function>( _klee_make_symbolic.getCallee() );
+
+  if ( __klee_assume ) {
+    _klee_assume = M.getOrInsertFunction( "klee_assume", _klee_assume->getFunctionType(), _klee_assume->getAttributes() );
+    klee_assume  = dyn_cast<Function>( _klee_assume.getCallee() );
+  }
+
+  for ( Function &F : *Symbolize::Query ) {
+    for ( BasicBlock &BB : F ) {
+      for ( Instruction &I : BB ) {
+        if ( !( CI = dyn_cast<CallInst>( &I ) ) ) continue;
+
+        Function *called = CI->getCalledFunction();
+        if ( !called ) continue; // todo: explore why this is necessary
+        name = called->getName();
+
+        if ( make = ( name != "klee_assume" ) && name != "klee_make_symbolic" ) continue;
+
+        if ( make ) {
+
+
+
+
+
+        } else {
+
+
+
+
+        }
+      }
+    }
+  }
+}
+
+
+/*
+//errs() << I << "\n\tname := " << name << "\n\tops  := ";
+
+
+op = I.op_begin();
+while ( op ) {
+//if ( op != I.op_begin() ) errs() << " : ";
+
+Value *v = op->get();
+//v->printAsOperand( errs() );
+
+op = op->getNext();
+}
+//errs() << "\n\n";
+*/
 
 
 PreservedAnalyses Symbolize::run( Module &M, ModuleAnalysisManager &MAM ) {
-  parseConfig();
-  loadQuery( M.getContext() );
+  Symbolize::parseConfig();
+  Symbolize::loadQuery( M.getContext() );
 
   Context Ctx;
 
-  transferGlobals( M, &Ctx );
-  transferSymbolics( M, &Ctx );
-
-  for ( Function &F : M ) symbolize( F );
+  Symbolize::transferGlobals( M, &Ctx );
+  Symbolize::findVariables( M, &Ctx );
+  Symbolize::transferSymbolics( M, &Ctx );
 
   return PreservedAnalyses::none();
 }
