@@ -25,17 +25,17 @@ def parse_args():
 
 class SoidAPI():
 
-    verification = 1
+    verification      = 1
     counterfactual = {
         'single'      : 2,
         'necessary'   : 3,
-        'sufficient'  : 4
+        'sufficient'  : 4,
     }
     behavior = {
         'necessary'   : 5,
-        'sufficient'  : 6
+        'sufficient'  : 6,
     }
-    agent        = 7
+    agent             = 7
 
 
     def __init__( self ):
