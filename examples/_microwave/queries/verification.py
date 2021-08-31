@@ -1,11 +1,16 @@
 import soid
 
+from mw import *
 
-start  = 0
-cancel = 1
-dopen  = 2
-dclose = 3
-nothng = 4
+
+@soid.query_type
+def query_type():
+    return soid.verification
+
+
+@soid.descriptor
+def descriptor():
+    return 'When the agent observes an error, will they always try to resolve it? Resolution is understood as either a) closing the door, or b) pushing cancel.'
 
 
 @soid.environmental
@@ -21,11 +26,3 @@ def state( S ):
 @soid.behavior
 def behavior( E, S, P )
     return Or( P.decision == cancel, P.decision == dclose )
-
-
-@soid.constrain
-def constrain():
-
-    E = soid.E( { 'error' : 'bool' } )
-    S = None
-    P = soid.P( { 'decision' : 'bool' } )
