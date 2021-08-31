@@ -4,7 +4,7 @@ from .mw import *
 
 
 def query_type():
-    return verification
+    return soid.verification
 
 
 def descriptor():
