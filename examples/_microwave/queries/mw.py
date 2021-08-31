@@ -6,7 +6,6 @@ dopen  = 2
 dclose = 3
 nothng = 4
 
-@soid.constrain
 def constrain():
 
     E = soid.E( {

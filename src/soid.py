@@ -1,8 +1,13 @@
+from queue import LifoQueue
 from collections import namedtuple
 
 import os
+import os.path
+import sys
 import argparse
 import importlib
+import types
+import functools
 
 import z3
 
@@ -13,21 +18,23 @@ def parse_args():
 
     parser.add_argument( '-f', '--float', action = 'store_true', default = False, dest = 'float', \
                          help = 'Use alternative symbolic execution (KLEE) engine with experimental support for floats.' )
-    parser.add_argument( '-c', '--config', action = 'store', type = str, default = None, dest = 'make', required = True, \
+    parser.add_argument( '-m', '--make', action = 'store', type = str, default = None, dest = 'make', required = True, \
                          help = 'Location of program makefile; if not a resolveable path soid will attempt to load ./Makefile.' )
-    parser.add_argument( '-q', '--query', action = 'store', type = str, default = None, dest = 'query', required = True, \
-                         help = 'Location of query file; if not a resolveable path soid will attempt to load ./query.py.' )
+    parser.add_argument( '-qs', '-queries', action = 'store', type = str, default = None, dest = 'queries', required = True, \
+                         help = 'Location of queries directory; if not a resolveable path soid will attempt to use ./')
+    parser.add_argument( '-q', '--query', action = 'store', type = str, default = None, nargs = '*', dest = 'query', required = False, \
+                         help = 'List of queries from directory to execute; if this parameter is not provided then all are attempted.' )
     parser.add_argument( '-n', '--enum', action = 'store', type = int, default = 100, dest = 'enum', required = False, \
                          help = 'Number of candidates to enumerate, used for sufficient synthesis queries.' )
 
     args = parser.parse_args()
 
-    if not os.path.exists( args[ 'make' ] ):
-        args[ 'make' ]  = './Makefile'
-    if not os.path.exists( args[ 'query' ] ):
-        args[ 'query' ] = './query.py'
+    if not os.path.exists( args.make ):
+        args.make  = './Makefile'
+    if not os.path.exists( args.queries ):
+        args.query = './'
 
-    return
+    return args
 
 
 
@@ -47,7 +54,8 @@ class SoidAPI():
 
 
     def __init__( self ):
-        self.solver = z3.solver()
+
+        self.solver = z3.Solver()
 
         self.E = None # environmental vars
         self.S = None # state vars
@@ -67,6 +75,15 @@ class SoidAPI():
 
         self._ = None    # ignored
 
+        self.funcmap = {
+            'environmental' : self._environmental,
+            'state'         : self._state,
+            'behavior'      : self._behavior,
+            'constrain'     : self._constrain,
+            'descriptor'    : self._descriptor,
+            'query_type'    : self._query_type,
+        }
+
         self.typemap = {
             'bool'  : lambda n: bv32( n ),
             'int'   : lambda n: bv32( n ),
@@ -80,24 +97,33 @@ class SoidAPI():
             ret = f( *args, **kwargs )
             if type( ret ) == tuple and store2:
                 store1, store2 = ret
-            store = ret
+            store1 = ret
             return
+        return __inner
 
 
-    def environmental( self, f ):
-        return wrap( self, f, self.phi, self.obs_phi )
+    def _environmental( self, f ):
+        return self.wrap( f, self.phi, self.obs_phi )
 
 
-    def state( self, f ):
-        return wrap( self, f, self.vphi, self.obs_vphi )
+    def _state( self, f ):
+        return self.wrap( f, self.vphi, self.obs_vphi )
 
 
-    def behavior( self, f ):
-        return wrap( self, f, self.beta )
+    def _behavior( self, f ):
+        return self.wrap( f, self.beta )
 
 
-    def constrain( self, f ):
-        return wrap( self, f, self._ )
+    def _constrain( self, f ):
+        return self.wrap( f, self._ )
+
+
+    def _descriptor( self, f ):
+        return self.wrap( f, self.descriptor )
+
+
+    def _query_type( self, f ):
+        return self.wrap( f, self.query_type )
 
 
     def bv32( self, name ):
@@ -115,33 +141,58 @@ class SoidAPI():
 
 
     def E( self, vdict ):
-        self.E = varset( vdict );
+        self.E = self.varset( vdict );
         return self.E
 
 
     def S( self, vdict ):
-        self.S = varset( vdict );
+        self.S = self.varset( vdict );
         return self.S
 
 
     def P( self, vdict ):
-        self.P = varset( vdict );
+        self.P = self.varset( vdict );
         return self.P
 
 
-    def state( self, f ):
-        return wrap( self, f, self.vphi )
+def extract( qs, queue = LifoQueue() ):
 
+    if 'soid' not in dir( qs ):
+        return queue
 
-    def behavior( self, f ):
-        return wrap( self, f, self.beta )
+    for name in dir( qs ):
+        obj = getattr( qs, name )
 
+        if isinstance( obj, types.ModuleType ):
+            queue = extract( obj, queue )
+
+        if name == 'query_type':
+            q   = qs
+            fs  = [ f for f in dir( q ) if f in soid.funcmap.keys() ]
+            ctx = { 'name' : q.__name__ }
+
+            for f in fs:
+                obj = getattr( q, f )
+                if isinstance( obj, types.FunctionType ):
+                    setattr( q, f, soid.funcmap[ f ]( obj ) )
+                    ctx[ f ] = getattr( q, f )
+            queue.put( ctx )
+
+    return queue
 
 
 if __name__ == '__main__':
 
     soid = SoidAPI()
-
     args = parse_args()
-    #importlib.find_loader( args[ 'query' ] )
-    #importlib.import_module( )
+
+    # load query module
+
+    path, fn = os.path.split( args.queries )
+    sys.path.insert( 0, path )
+    qs = importlib.import_module( fn )
+
+    # wrap query functions
+    queries = extract( qs )
+
+    # todo: make sure ctx has everything we need
