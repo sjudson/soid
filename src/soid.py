@@ -2,6 +2,8 @@ from collections import namedtuple
 
 import os
 import argparse
+import importlib
+
 import z3
 
 
@@ -11,15 +13,21 @@ def parse_args():
 
     parser.add_argument( '-f', '--float', action = 'store_true', default = False, dest = 'float', \
                          help = 'Use alternative symbolic execution (KLEE) engine with experimental support for floats.' )
-    parser.add_argument( '-c', '--config', action = 'store', type = str, default = None, dest = 'config', required = True, \
-                         help = 'Location of program configuration file; if not resolveable path it will attempt to load ./{argument}.config.toml.' )
+    parser.add_argument( '-c', '--config', action = 'store', type = str, default = None, dest = 'make', required = True, \
+                         help = 'Location of program makefile; if not a resolveable path soid will attempt to load ./Makefile.' )
     parser.add_argument( '-q', '--query', action = 'store', type = str, default = None, dest = 'query', required = True, \
-                         help = 'Location of query file; if not resolveable path it will attempt to load ./{argument}.query.toml.' )
+                         help = 'Location of query file; if not a resolveable path soid will attempt to load ./query.py.' )
     parser.add_argument( '-n', '--enum', action = 'store', type = int, default = 100, dest = 'enum', required = False, \
                          help = 'Number of candidates to enumerate, used for sufficient synthesis queries.' )
 
+    args = parser.parse_args()
 
-    return parser.parse_args()
+    if not os.path.exists( args[ 'make' ] ):
+        args[ 'make' ]  = './Makefile'
+    if not os.path.exists( args[ 'query' ] ):
+        args[ 'query' ] = './query.py'
+
+    return
 
 
 
@@ -129,11 +137,11 @@ class SoidAPI():
         return wrap( self, f, self.beta )
 
 
-    def cpp_writer( self ):
-        pass
-
-
 
 if __name__ == '__main__':
 
+    soid = SoidAPI()
+
     args = parse_args()
+    #importlib.find_loader( args[ 'query' ] )
+    #importlib.import_module( )

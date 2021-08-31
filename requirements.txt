@@ -1,0 +1,4 @@
+boto==2.49.0
+cvc4-solver==1.6
+pkg_resources==0.0.0
+z3-solver==4.8.12.0
