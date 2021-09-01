@@ -123,7 +123,7 @@ fi
 
 virtualenv $envd -p python3
 source ./$envd/bin/activate
-pip install requirements.txt
+pip install -r requirements.txt
 
 # cvc5 and python bindings
 cd ./cvc5
