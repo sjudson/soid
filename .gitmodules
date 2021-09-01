@@ -10,3 +10,6 @@
 [submodule "tomlplusplus"]
 	path = tomlplusplus
 	url = https://github.com/marzer/tomlplusplus
+[submodule "cvc5"]
+	path = cvc5
+	url = git@github.com:cvc5/cvc5.git

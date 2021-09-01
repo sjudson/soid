@@ -6,13 +6,10 @@ dopen  = 2
 dclose = 3
 nothng = 4
 
-def constrain():
+def declare():
 
-    E = soid.E( {
-        'error' : 'bool',
-        'close' : 'bool',
-        'heat'  : 'bool',
-        'start' : 'bool',
-    } )
-    S = soid.S ( { 'started' : 'bool' } )
-    P = soid.P( { 'decision' : 'uint32' } )
+    E = { 'error' : 'bool', 'close' : 'bool', 'heat'  : 'bool', 'start' : 'bool' }
+    S = { 'started' : 'bool' }
+    P = { 'decision' : 'uint32' }
+
+    return E, S, P
