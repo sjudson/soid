@@ -107,3 +107,31 @@ else
 fi
 
 make
+cd ../..
+
+# setup virtualenv and python depts
+envd="venv"
+if [ -d './venv' ]
+then
+    rm -rf ./venv
+fi
+if [ -d './env' ]
+then
+    rm -rf ./env
+    envd="env"
+fi
+
+virtualenv $envd -p python3
+source ./$envd/bin/activate
+pip install requirements.txt
+
+# cvc5 and python bindings
+cd ./cvc5
+./configure.sh --python-bindings --auto-download
+cd ./build
+make
+cd ./src/api/python
+python setup.py install
+deactivate
+
+
