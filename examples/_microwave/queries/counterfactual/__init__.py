@@ -1,4 +1,4 @@
-import soid
+import soidlib
 
 from . import cancel
 from . import start

@@ -1,10 +1,9 @@
-import soid
+import soidlib
 
-from .mw import *
+from .mw import declare, cancel, dclose
 
 
-def query_type():
-    return soid.verification
+soid = soidlib.Soid( 'Resolve', soidlib.verification )
 
 
 def descriptor():
@@ -12,7 +11,7 @@ def descriptor():
 
 
 def environmental( E ):
-    return ( E.error == 1 )
+    return soid.Equal( E.error, True )
 
 
 def state( S ):
@@ -20,4 +19,12 @@ def state( S ):
 
 
 def behavior( E, S, P ):
-    return Or( P.decision == cancel, P.decision == dclose )
+    return soid.Or( soid.Equal( P.decision, cancel ),
+                    soid.Equal( P.decision, dclose ) )
+
+
+soid.register( descriptor )
+soid.register( declare )
+soid.register( environmental )
+soid.register( state )
+soid.register( behavior )

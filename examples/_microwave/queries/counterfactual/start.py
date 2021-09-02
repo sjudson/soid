@@ -1,10 +1,10 @@
-import soid
+import soidlib
 
 from ..mw import *
 
 
 def query_type():
-    return soid.counterfactual.necessary
+    return soidlib.counterfactual.necessary
 
 
 def descriptor():

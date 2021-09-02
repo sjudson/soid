@@ -1,4 +1,4 @@
-import soid
+import soidlib
 
 start  = 0
 cancel = 1
@@ -8,8 +8,13 @@ nothng = 4
 
 def declare():
 
-    E = { 'error' : 'bool', 'close' : 'bool', 'heat'  : 'bool', 'start' : 'bool' }
-    S = { 'started' : 'bool' }
-    P = { 'decision' : 'uint32' }
+    E = { 'error'    : soidlib.types.bool( 'error' ),
+          'close'    : soidlib.types.bool( 'close' ),
+          'heat'     : soidlib.types.bool( 'heat'  ),
+          'start'    : soidlib.types.bool( 'start' ) }
+    
+    S = { 'started'  : soidlib.types.bool( 'started' ) }
+    
+    P = { 'decision' : soidlib.types.u32( 'decision' ) }
 
     return E, S, P
