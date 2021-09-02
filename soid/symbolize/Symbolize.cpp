@@ -304,6 +304,8 @@ void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
   _klee_assume = M.getOrInsertFunction( "klee_assume", __klee_assume->getFunctionType(), __klee_assume->getAttributes() );
   klee_assume  = cast<Function>( _klee_assume.getCallee() );
 
+  errs() << "\n\n\n";
+
   for ( Function &F : *Symbolize::Query ) {
     for ( BasicBlock &BB : F ) {
       for ( Instruction &I : BB ) {
@@ -313,26 +315,19 @@ void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
         if ( !called ) continue; // todo: explore why this is necessary
         name = called->getName();
 
-        //// XXXXXXXXXXXX
-        ///names[ XXX ] = YYY;
-
         if ( ( make = ( name != "klee_assume" ) ) && name != "klee_make_symbolic" ) continue;
 
         if ( make ) {
 
           IRBuilder<> Builder( &I );
 
-          errs() << "\n";
-
           // map variable
-          /* XXXXXXXXX
           Value *nvop, *vop = I.getOperand( 0 );
-          nvop = ( isin_locs( names[ vop ], Ctx->ilocs ) )
-            ? cast<Value>( Ctx->ilocs[ names[ vop ] ]->I )
-            : cast<Value>( Ctx->plocs[ names[ vop ] ]->I );
+          nvop = ( isin_locs( "foo", Ctx->ilocs ) )
+            ? cast<Value>( Ctx->ilocs[ "foo" ]->I )
+            : cast<Value>( Ctx->plocs[ "foo" ]->I );
 
           Value *nvptr = Builder.CreateIntToPtr( nvop, vop->getType(), nvop->getName() + "_ptr" );
-          */
 
           // map size
           Value *nsop, *sop = I.getOperand( 1 );

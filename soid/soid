@@ -1,0 +1,186 @@
+#!/usr/bin/env python
+
+from queue import LifoQueue
+from collections import namedtuple
+
+import soidlib
+
+import os
+import os.path
+import sys
+import argparse
+import importlib
+import types
+import functools
+
+import z3
+import pycvc5
+
+
+class Oracle():
+
+    def __init__( self ):
+
+        self.runners = {
+            soidlib.verification              : self.verif,
+            #soidlib.counterfactual.single     : self.ocf,
+            #soidlib.counterfactual.necessary  : self.ncf,
+            #soidlib.counterfactual.sufficient : self.scf,
+            #soidlib.behavior.necessary        : self.nbv,
+            #soidlib.behavior.sufficient       : self.sbv,
+            #soidlib.agent                     : self.agent
+        }
+
+        self.reset()
+        return
+
+
+    def ld_env( self, query ):
+        def __inner():
+            return query._Soid__environmental( self.E )
+        self.phi = __inner
+        return
+
+
+    def ld_st( self, query ):
+        def __inner():
+            return query._Soid__state( self.S )
+        self.vphi = __inner
+        return
+
+
+    def ld_bhv( self, query ):
+        def __inner():
+            info = query._Soid__behavior_info
+
+            if info.args == [ 'P' ]:
+                return query._Soid__behavior( self.P )
+            elif info.args == [ 'E', 'P' ]:
+                return query._Soid__behavior( self.E, self.P )
+            elif info.args == [ 'S', 'P' ]:
+                return query._Soid__behavior( self.S, self.P )
+            elif info.args == [ 'E', 'S', 'P' ]:
+                return query._Soid__behavior( self.E, self.S, self.P )
+            else:
+                pass # todo: handle
+        self.beta = __inner
+        return
+
+
+    def load( self, query ):
+
+        self.reset()
+
+        # register as oracle for query
+        query._Soid__oracle( self )
+
+        # extract mangled
+        self.name   = query._Soid__name
+        self.type   = query._Soid__type
+        self.synth  = query._Soid__synth
+        self.solver = query._Soid__solver
+
+        query._Soid__declare()        
+        self.description = query._Soid__descriptor()
+
+        self.ld_env( query )
+        self.ld_st( query )
+        self.ld_bhv( query )
+
+        return
+
+
+    def reset( self ):
+
+        self.synth  = None
+        self.solver = None
+
+        self.E = None    # environmental vars
+        self.S = None    # state vars
+        self.P = None    # program vars
+
+        self.phi  = None # environmental
+        self.vphi = None # state
+        self.pi   = None # agent
+        self.beta = None # behavior
+
+        # observed, optional for pretty printing counterfactuals
+        self.obs_phi  = None # environmental
+        self.obs_vphi = None # state
+
+        self.description = None
+
+        return
+
+    
+    def run( self ):
+        self.runners[ self.type ]() # todo: handle error case
+
+
+    def verif( self ):
+
+        # load pi
+        self.solver.add( z3.Not( z3.Implies( z3.And( self.phi(), self.vphi(), self.pi() ), self.beta() ) ) )
+
+        self.solver.check()
+        
+
+def parse_args():
+
+    parser = argparse.ArgumentParser( description = 'SMT-based oracles for investigating decisions.' )
+
+    parser.add_argument( '-f', '--float', action = 'store_true', default = False, dest = 'float', \
+                         help = 'Use alternative symbolic execution (KLEE) engine with experimental support for floats.' )
+    parser.add_argument( '-m', '--make', action = 'store', type = str, default = None, dest = 'make', required = True, \
+                         help = 'Location of program makefile; if not a resolveable path soid will attempt to load ./Makefile.' )
+    parser.add_argument( '-qs', '-queries', action = 'store', type = str, default = None, dest = 'queries', required = True, \
+                         help = 'Location of queries directory; if not a resolveable path soid will attempt to use ./')
+    parser.add_argument( '-q', '--query', action = 'store', type = str, default = None, nargs = '*', dest = 'query', required = False, \
+                         help = 'List of queries from directory to execute; if this parameter is not provided then all are attempted.' )
+    parser.add_argument( '-n', '--enum', action = 'store', type = int, default = 100, dest = 'enum', required = False, \
+                         help = 'Number of candidates to enumerate, used for sufficient synthesis queries.' )
+
+    args = parser.parse_args()
+
+    if not os.path.exists( args.make ):
+        args.make  = './Makefile'
+    if not os.path.exists( args.queries ):
+        args.query = './'
+
+    return args
+
+
+def extract( qs, args, queue = LifoQueue() ):
+
+    if 'soidlib' not in dir( qs ):
+        return queue
+
+    for name in dir( qs ):
+        obj = getattr( qs, name )
+
+        if isinstance( obj, types.ModuleType ):
+            queue = extract( obj, args, queue )
+
+        if isinstance( obj, soidlib.Soid ):
+            if args.query and q.__name__ not in args.query:
+                continue
+            queue.put( obj )
+
+    return queue
+
+
+if __name__ == '__main__':
+
+    oracle = Oracle()
+    args = parse_args()
+
+    path, fn = os.path.split( args.queries )
+    sys.path.insert( 0, path )
+    qs = importlib.import_module( fn )
+
+    queries = extract( qs, args )
+
+    while not queries.empty():
+        nxt = queries.get()
+        oracle.load( nxt )
+        oracle.run()
