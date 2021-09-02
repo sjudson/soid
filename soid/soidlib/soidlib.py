@@ -1,36 +1,7 @@
 from collections import namedtuple
 
 import z3
-import pycvc5
 import inspect
-
-
-
-###########################
-##### UTILITY METHODS #####
-###########################
-
-
-def _tobv32( x ):
-    return z3.BitVecVal( 1 * x, 32 )   # implicit bool conversion
-
-
-def _type_resolve( args ):
-
-    largs = list( args )
-    for i, arg in enumerate( args ):
-        if isinstance( arg, bool ) or isinstance( arg, bool ):
-            largs[ i ] = _tobv32( arg )
-
-        if isinstance( arg, z3.z3.ArrayRef ):
-            largs[ i ] = z3.Concat( z3.Select( arg, z3.BitVecVal( 3, 32 ) ),
-                                    z3.Select( arg, z3.BitVecVal( 2, 32 ) ),
-                                    z3.Select( arg, z3.BitVecVal( 1, 32 ) ),
-                                    z3.Select( arg, z3.BitVecVal( 0, 32 ) ) )
-
-        # todo: any other cases?
-
-    return tuple( largs )
 
 
 
@@ -56,17 +27,39 @@ agent          = 6
 
 
 
-_ty = namedtuple( 'types', [ 'bool', 'int', 'u32' ] )
+def bv32arr( x ):
+    return z3.Array( x, z3.BitVecSort( 32 ), z3.BitVecSort( 8 ) )
+
+
+def cint_to_bv32( x ):
+    return z3.BitVecVal( 1 * x, 32 )   # implicit bool conversion
+
+
+def cbool_to_bv32( x ):
+    return cint_to_bv32( x )
+
+
+def bv32arr_to_bv32( x ):
+    return z3.Concat( z3.Select( x, z3.BitVecVal( 3, 32 ) ),
+                      z3.Select( x, z3.BitVecVal( 2, 32 ) ),
+                      z3.Select( x, z3.BitVecVal( 1, 32 ) ),
+                      z3.Select( x, z3.BitVecVal( 0, 32 ) ) )
+
 
 def _bv32( v ):
-    if isinstance( v, str ):
-        return z3.Array( v, z3.BitVecSort( 32 ), z3.BitVecSort( 8 ) )
-    elif isinstance( v, bool ) or isinstance( v, int ):
-        return _tobv32( v )
+    if isinstance( v, str ):                             # if given a name then create a new array-based variable
+        return bv32arr( v )
+    elif isinstance( v, bool ) or isinstance( v, int ):  # otherwise treat as a constant
+        return cint_to_bv32( v )
     else:
         pass # todo: handle
 
-types = _ty( bool = _bv32, int = _bv32, u32 = _bv32 )
+
+_tyu   = namedtuple( 'tyutil', [ 'bv32arr', 'int_to_bv32', 'bool_to_bv32', 'bv32arr_to_bv32' ] )
+tyutil = _tyu( bv32arr = bv32arr, int_to_bv32 = cint_to_bv32, bool_to_bv32 = cbool_to_bv32, bv32arr_to_bv32 = bv32arr_to_bv32 )
+
+_ty    = namedtuple( 'types', [ 'bool', 'int', 'u32', 'util' ] )
+types  = _ty( bool = _bv32, int = _bv32, u32 = _bv32, util = tyutil )
 
 
 
@@ -80,11 +73,9 @@ class Soid():
 
     def __init__( self, qn, qt ):
 
-        self.__name = qn
-        self.__type = qt
-
-        self.__synth  = ( qt not in [ verification, counterfactual.single ] )
-        self.__solver = z3.Solver() if not self.__synth else pycvc5.Solver()
+        self.__name  = qn
+        self.__type  = qt
+        self.__synth = ( qt not in [ verification, counterfactual.single ] )
 
         self.__regmap = {
             'descriptor'    : self.__reg_desc,
@@ -144,6 +135,22 @@ class Soid():
         self.__behavior_info = inspect.getfullargspec( f )
 
 
+    def __type_resolve( self, args ):
+
+        largs = list( args )
+        for i, arg in enumerate( args ):
+            if isinstance( arg, bool ) or isinstance( arg, bool ):
+                largs[ i ] = cint_to_bv32( arg )
+
+            if isinstance( arg, z3.z3.ArrayRef ):
+                largs[ i ] = bv32arr_to_bv32( arg )
+
+            # todo: any other cases?
+
+        return tuple( largs )
+
+
+
     ########################
     ##### USER METHODS #####
     ########################
@@ -155,17 +162,17 @@ class Soid():
 
 
     def Equal( self, *args ):
-        args = _type_resolve( args )
-        return ( args[ 0 ] == args[ 1 ] ) if not self.__synth else pycvc5.mkTerm( pycvc5.kinds.Equal, args )
+        args = self.__type_resolve( args )
+        return ( args[ 0 ] == args[ 1 ] )
 
 
     def And( self, *args ):
-        args = _type_resolve( args )
-        return z3.And( *args ) if not self.__synth else pycvc5.mkTerm( pycvc5.kinds.And, args )
+        args = self.__type_resolve( args )
+        return z3.And( *args )
 
 
     def Or( self, *args ):
-        args = _type_resolve( args )
-        return z3.Or( *args ) if not self.__synth else pycvc5.mkTerm( pycvc5.kinds.Or, args )
+        args = self.__type_resolve( args )
+        return z3.Or( *args )
 
     # todo: add more

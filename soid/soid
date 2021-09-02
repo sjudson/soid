@@ -9,12 +9,15 @@ import os
 import os.path
 import sys
 import argparse
+import subprocess
 import importlib
 import types
 import functools
 
 import z3
 import pycvc5
+
+
 
 
 class Oracle():
@@ -67,6 +70,45 @@ class Oracle():
         return
 
 
+    def ld_agnt( self, makefile ):
+        mdir, _ = os.path.split( makefile )
+
+        # todo: tie in symbolize
+
+        ret = subprocess.run( [ 'make', 'symbolic' ], cwd = mdir )
+        klee_last = mdir + '/klee-last'
+
+        i  = 1
+        fs = []
+        while True:
+            fn = klee_last + '/test' + str( i ).zfill( 6 ) + '.smt2'
+            if not os.path.isfile( fn ):
+                break
+
+            fs.append( fn )
+            i += 1
+
+        paths = [ z3.parse_smt2_file( f )[ 0 ] for f in fs ]
+
+        ret = subprocess.run( [ 'make', 'clean' ], cwd = mdir )
+
+        self.paths = paths
+        return
+
+
+    def build_pi( self ):
+
+        symbls  = [ soidlib.types.util.bv32arr( '__soid__' +  p.__str__() ) for p in self.P ]
+        amends  = [ soidlib.types.util.bv32arr_to_bv32( p ) == soidlib.types.util.bv32arr_to_bv32( symbls[ i ] ) for i, p in enumerate( self.P ) ]
+
+        amended = [ z3.And( [ path ] + amends ) for path in self.paths ]
+
+        def __inner():
+            return z3.Or( *amended )
+        self.pi = __inner
+        return
+
+
     def load( self, query ):
 
         self.reset()
@@ -77,15 +119,17 @@ class Oracle():
         # extract mangled
         self.name   = query._Soid__name
         self.type   = query._Soid__type
-        self.synth  = query._Soid__synth
-        self.solver = query._Soid__solver
+        self.synth  = ( self.type not in [ soidlib.verification, soidlib.counterfactual.single ] )
+        self.solver = z3.Solver() if not self.synth else pycvc5.Solver()
 
-        query._Soid__declare()        
+        query._Soid__declare()
         self.description = query._Soid__descriptor()
 
         self.ld_env( query )
         self.ld_st( query )
         self.ld_bhv( query )
+
+        self.build_pi()
 
         return
 
@@ -101,7 +145,7 @@ class Oracle():
 
         self.phi  = None # environmental
         self.vphi = None # state
-        self.pi   = None # agent
+        self.pi   = None
         self.beta = None # behavior
 
         # observed, optional for pretty printing counterfactuals
@@ -112,18 +156,41 @@ class Oracle():
 
         return
 
-    
+
+
+    def z3_to_cvc5( expr ):
+        pass
+
+
     def run( self ):
         self.runners[ self.type ]() # todo: handle error case
 
 
     def verif( self ):
-
-        # load pi
+        #print(self.phi())
+        #print()
+        #print(self.vphi())
+        #print()
+        #print(self.pi())
+        #print()
+        #print(self.beta())
+        #print('\n\n')
         self.solver.add( z3.Not( z3.Implies( z3.And( self.phi(), self.vphi(), self.pi() ), self.beta() ) ) )
+        unsat = ( self.solver.check() == z3.unsat )
 
-        self.solver.check()
-        
+        #print(unsat)
+        #print('\n\n\n')
+
+        if not unsat:
+            model = self.solver.model()
+
+
+
+##########################
+##### CLI FUNCTIONS ######
+##########################
+
+            
 
 def parse_args():
 
@@ -162,8 +229,9 @@ def extract( qs, args, queue = LifoQueue() ):
             queue = extract( obj, args, queue )
 
         if isinstance( obj, soidlib.Soid ):
-            if args.query and q.__name__ not in args.query:
-                continue
+            #todo: fix
+            #if args.query and qs.__name__ not in args.query:
+            #    continue
             queue.put( obj )
 
     return queue
@@ -173,6 +241,8 @@ if __name__ == '__main__':
 
     oracle = Oracle()
     args = parse_args()
+
+    oracle.ld_agnt( args.make )
 
     path, fn = os.path.split( args.queries )
     sys.path.insert( 0, path )
