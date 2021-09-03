@@ -187,30 +187,30 @@ class Oracle():
             c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
             return self.solver.mkTerm( pycvc5.kinds.Equal, c0, c1 )
 
-        if is_quantifier( expr ) and expr.is_exists():
+        if z3.is_quantifier( expr ) and expr.is_exists():
             c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
             return self.solver.mkTerm( pycvc5.kinds.Exists, c0, c1 )
 
-        if is_quantifier( expr ) and expr.is_forall():
+        if z3.is_quantifier( expr ) and expr.is_forall():
             c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
             return self.solver.mkTerm( pycvc5.kinds.Forall, c0, c1 )
 
-        if is_int( expr ):
+        if z3.is_int( expr ):
             return self.solver.mkVar( self.solver.getIntegerSort(), str( expr ) )
 
-        if is_real( expr ):
+        if z3.is_real( expr ):
             return self.solver.mkVar( self.solver.getRealSort(), str( expr ) )
 
-        if is_int_value( expr ):
+        if z3.is_int_value( expr ):
             return self.solver.mkInteger( expr.as_long() )
 
-        if is_rational_value( expr ):
+        if z3.is_rational_value( expr ):
             return self.solver.mkReal( expr.as_double() )
 
-        if is_algebraic_value( expr ):
+        if z3.is_algebraic_value( expr ):
             return self.solver.mkReal( expr.as_double() )
 
-        if is_add( expr ):
+        if z3.is_add( expr ):
             c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
 
             c = expr.children[ 0 ]
@@ -221,7 +221,7 @@ class Oracle():
             else:
                 return self.solver.mkTerm( pycvc5.kinds.Plus, c0, c1  )
 
-        if is_mul( expr ):
+        if z3.is_mul( expr ):
             c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
 
             c = expr.children[ 0 ]
@@ -232,7 +232,7 @@ class Oracle():
             else:
                 return self.solver.mkTerm( pycvc5.kinds.Mult, c0, c1  )
 
-        if is_sub( expr ):
+        if z3.is_sub( expr ):
             c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
 
             c = expr.children[ 0 ]
@@ -243,13 +243,13 @@ class Oracle():
             else:
                 return self.solver.mkTerm( pycvc5.kinds.Minus, c0, c1  )
 
-        if is_div( expr ):
+        if z3.is_div( expr ):
             pass
 
-        if is_idiv( expr ):
+        if z3.is_idiv( expr ):
             pass
 
-        if is_mod( expr ):
+        if z3.is_mod( expr ):
             pass
 
         # signed le
@@ -348,60 +348,60 @@ class Oracle():
             else:
                 return self.solver.mkTerm( pycvc5.kinds.GT, c0, c1  )
 
-        if is_bv( expr ):
+        if z3.is_bv( expr ):
             return self.solver.mkVar( self.solver.mkBitVectorSort( expr.size() ), str( expr ) )
 
-        if is_bv_value( expr ):
+        if z3.is_bv_value( expr ):
             return self.solver.mkBitVec( expr.size() )
 
-        if is_array( expr ):
+        if z3.is_array( expr ):
             return self.solver.mkTerm( pycvc5.kinds.Array, z3_to_cvc5( expr.domain() ), z3_to_cvc5( expr.range() ) )
 
-        if is_const_array( expr ):
+        if z3.is_const_array( expr ):
             pass
 
-        if is_K( expr ):
+        if z3.is_K( expr ):
             pass
 
-        if is_map( expr ):
+        if z3.is_map( expr ):
             pass
 
-        if is_select( expr ):
+        if z3.is_select( expr ):
             c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
             return self.solver.mkTerm( pycvc5.kinds.Select, c0, c1 )
 
-        if is_store( expr ):
+        if z3.is_store( expr ):
             c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
             return self.solver.mkTerm( pycvc5.kinds.Store, c0, c1 )
 
-        if is_finite_domain( expr ):
+        if z3.is_finite_domain( expr ):
             pass
 
-        if is_finite_domain_value( expr ):
+        if z3.is_finite_domain_value( expr ):
             pass
 
-        if is_fprm( expr ):
+        if z3.is_fprm( expr ):
             pass
 
-        if is_fprm_value( expr ):
+        if z3.is_fprm_value( expr ):
             pass
 
-        if is_fp( expr ):
+        if z3.is_fp( expr ):
             pass
 
-        if is_fp_value( expr ):
+        if z3.is_fp_value( expr ):
             pass
 
-        if is_seq( expr ):
+        if z3.is_seq( expr ):
             pass
 
-        if is_string( expr ):
+        if z3.is_string( expr ):
             pass
 
-        if is_string_value( expr ):
+        if z3.is_string_value( expr ):
             pass
 
-        if is_arith_sort( expr ):
+        if z3.is_arith_sort( expr ):
             if expr.is_int():
                 return self.solver.getIntegerSort()
             elif expr.is_real():
@@ -409,19 +409,19 @@ class Oracle():
             else:
                 pass # todo: handle
 
-        if is_bv_sort( expr ):
+        if z3.is_bv_sort( expr ):
             return self.solver.mkBitVectorSort( expr.size() )
 
-        if is_array_sort( expr ):
+        if z3.is_array_sort( expr ):
             return self.solver.mkArraySort( z3_to_cvc5( expr.domain() ), z3_to_cvc5( expr.range() ) )
 
-        if is_finite_domain_sort( expr ):
+        if z3.is_finite_domain_sort( expr ):
             pass
 
-        if is_fp_sort( expr ):
+        if z3.is_fp_sort( expr ):
             pass
 
-        if is_fprm_sort( expr ):
+        if z3.is_fprm_sort( expr ):
             pass
 
 
