@@ -425,7 +425,6 @@ class Oracle():
             pass
 
 
-
     def run( self ):
         self.runners[ self.type ]() # todo: handle error case
 
@@ -438,6 +437,23 @@ class Oracle():
                     z3.Implies(
                         z3.And( self.phi(), self.vphi(), self.pi() ),
                         self.beta() ) ) ) )
+
+        unsat = ( self.solver.check() == z3.unsat )
+
+        if not unsat:
+            model = self.solver.model()
+
+            for var in list( self.E ) + list( self.S ) + list( self.P ):
+                model.eval( var, model_completion = True )
+
+
+    def ocf( self ):
+        self.solver.add(
+            z3.And(
+                z3.And( phi, vphi, pi ),
+                z3.Implies(
+                    z3.And( phi, vphi, pi ),
+                    beta ) ) )
 
         unsat = ( self.solver.check() == z3.unsat )
 
@@ -480,6 +496,7 @@ def parse_args():
     return args
 
 
+
 def extract( qs, args, queue = LifoQueue() ):
 
     if 'soidlib' not in dir( qs ):
@@ -498,6 +515,7 @@ def extract( qs, args, queue = LifoQueue() ):
             queue.put( obj )
 
     return queue
+
 
 
 if __name__ == '__main__':
