@@ -1,10 +1,9 @@
 import soidlib
 
-from ..mw import *
+from ..mw import declare, cancel
 
 
-def query_type():
-    return soidlib.counterfactual.single
+soid = soidlib.Soid( 'cancel', soidlib.soidlib.counterfactual.single )
 
 
 def descriptor():
@@ -12,16 +11,31 @@ def descriptor():
 
 
 def environmental( E ):
-    obs = And( E.error == 1, And( E.close == 0, And( E.heat == 0, E.start == 1 ) ) )
-    qry = And( E.error == 1, E.start == 1)
+    obs = soid.And( soid.Equal( E.error, True ),
+                       soid.Equal( E.close, False ),
+                       soid.Equal( E.heat,  False ),
+                       soid.Equal( E.start, True ) )
+
+    qry = soid.And( soid.Equal( E.error, True ),
+                       soid.Equal( E.start, True ) )
+
     return qry, obs
 
 
 def state( S ):
-    obs = ( S.started == 1 )
+    obs = soid.Equal( S.started, True )
+
     qry = True
+
     return qry, obs
 
 
-def behavior( E, S, P ):
-    return ( P.decision == cancel )
+def behavior( P ):
+    return soid.Equal( P.decision, cancel )
+
+
+soid.register( descriptor )
+soid.register( declare )
+soid.register( environmental )
+soid.register( state )
+soid.register( behavior )

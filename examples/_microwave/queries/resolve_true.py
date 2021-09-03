@@ -3,7 +3,7 @@ import soidlib
 from .mw import declare, cancel, dclose
 
 
-soid = soidlib.Soid( 'resolve', soidlib.verification )
+soid = soidlib.Soid( 'resolve.2', soidlib.verification )
 
 
 def descriptor():

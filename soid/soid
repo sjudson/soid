@@ -25,9 +25,9 @@ class Oracle():
 
         self.runners = {
             soidlib.verification              : self.verif,
-            #soidlib.counterfactual.single     : self.ocf,
-            #soidlib.counterfactual.necessary  : self.ncf,
-            #soidlib.counterfactual.sufficient : self.scf,
+            soidlib.counterfactual.single     : self.ocf,
+            soidlib.counterfactual.necessary  : self.ncf,
+            soidlib.counterfactual.sufficient : self.scf,
             #soidlib.behavior.necessary        : self.nbv,
             #soidlib.behavior.sufficient       : self.sbv,
             #soidlib.agent                     : self.agent
@@ -38,33 +38,62 @@ class Oracle():
 
 
     def ld_env( self, query ):
-        def __inner():
-            return query._Soid__environmental( self.E )
-        self.phi = __inner
+
+        ret = None
+        if hasattr( query, '_Soid__environmental' ):
+            ret = query._Soid__environmental( self.E )
+
+        def __inner( obs = False ):
+            if type( ret ) == tuple and len( ret ) == 2:
+                return ret[ 0 ] if not obs else ret[ 1 ]
+            elif type( ret ) == tuple:
+                pass # todo: handle
+            else:
+                return ret
+
+        self.phi     = lambda: __inner()
+        self.obs_phi = lambda: __inner( True )
         return
 
 
     def ld_st( self, query ):
-        def __inner():
-            return query._Soid__state( self.S )
-        self.vphi = __inner
+
+        ret = None
+        if hasattr( query, '_Soid__state' ):
+            ret = query._Soid__state( self.S )
+
+        def __inner( obs = False ):
+            if type( ret ) == tuple and len( ret ) == 2:
+                return ret[ 0 ] if not obs else ret[ 1 ]
+            elif type( ret ) == tuple:
+                pass # todo: handle
+            else:
+                return ret
+
+        self.vphi     = lambda: __inner()
+        self.obs_vphi = lambda: __inner( True )
         return
 
 
     def ld_bhv( self, query ):
-        def __inner():
+
+        ret = None
+        if hasattr( query, '_Soid__behavior' ):
             info = query._Soid__behavior_info
 
             if info.args == [ 'P' ]:
-                return query._Soid__behavior( self.P )
+                ret = query._Soid__behavior( self.P )
             elif info.args == [ 'E', 'P' ]:
-                return query._Soid__behavior( self.E, self.P )
+                ret = query._Soid__behavior( self.E, self.P )
             elif info.args == [ 'S', 'P' ]:
-                return query._Soid__behavior( self.S, self.P )
+                ret = query._Soid__behavior( self.S, self.P )
             elif info.args == [ 'E', 'S', 'P' ]:
-                return query._Soid__behavior( self.E, self.S, self.P )
+                ret = query._Soid__behavior( self.E, self.S, self.P )
             else:
                 pass # todo: handle
+
+        def __inner():
+            return ret
         self.beta = __inner
         return
 
@@ -156,92 +185,84 @@ class Oracle():
         return
 
 
-    def z3_to_cvc5( self, expr ):
+    def z3_to_cvc5( self, expr, I = {} ):
 
-        if z3.is_bool( expr ):
-            return self.solver.mkVar( self.solver.getBooleanSort(), str( expr ) )
+        if expr == None:
+            return None, I
 
-        if z3.is_true( expr ):
-            return self.solver.mkTrue()
-
-        if z3.is_false( expr ):
-            return self.solver.mkFalse()
+        s = str( expr )
+        if s in I:
+            return I[ s ], I
 
         if z3.is_and( expr ):
-            c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
-            return self.solver.mkTerm( pycvc5.kinds.And, c0, c1 )
+            c0, I = self.z3_to_cvc5( expr.children()[ 0 ], I )
+            c1, I = self.z3_to_cvc5( expr.children()[ 1 ], I )
+            return self.solver.mkTerm( pycvc5.kinds.And, c0, c1 ), I
 
         if z3.is_or( expr ):
-            c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
-            return self.solver.mkTerm( pycvc5.kinds.Or, c0, c1 )
+            c0, I = self.z3_to_cvc5( expr.children()[ 0 ], I )
+            c1, I = self.z3_to_cvc5( expr.children()[ 1 ], I )
+            return self.solver.mkTerm( pycvc5.kinds.Or, c0, c1 ), I
 
         if z3.is_implies( expr ):
-            c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
-            return self.solver.mkTerm( pycvc5.kinds.Implies, c0, c1 )
+            c0, I = self.z3_to_cvc5( expr.children()[ 0 ], I )
+            c1, I = self.z3_to_cvc5( expr.children()[ 1 ], I )
+            return self.solver.mkTerm( pycvc5.kinds.Implies, c0, c1 ), I
 
         if z3.is_not( expr ):
-            c0 = z3_to_cvc5( expr.children[ 0 ] )
-            return self.solver.mkTerm( pycvc5.kinds.Not, c0 )
+            c0, I = self.z3_to_cvc5( expr.children()[ 0 ], I )
+            return self.solver.mkTerm( pycvc5.kinds.Not, c0 ), I
 
         if z3.is_eq( expr ):
-            c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
-            return self.solver.mkTerm( pycvc5.kinds.Equal, c0, c1 )
+            c0, I = self.z3_to_cvc5( expr.children()[ 0 ], I )
+            c1, I = self.z3_to_cvc5( expr.children()[ 1 ], I )
+            return self.solver.mkTerm( pycvc5.kinds.Equal, c0, c1 ), I
 
         if z3.is_quantifier( expr ) and expr.is_exists():
-            c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
-            return self.solver.mkTerm( pycvc5.kinds.Exists, c0, c1 )
+            c0, I = self.z3_to_cvc5( expr.children()[ 0 ], I )
+            c1, I = self.z3_to_cvc5( expr.children()[ 1 ], I )
+            return self.solver.mkTerm( pycvc5.kinds.Exists, c0, c1 ), I
 
         if z3.is_quantifier( expr ) and expr.is_forall():
-            c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
-            return self.solver.mkTerm( pycvc5.kinds.Forall, c0, c1 )
-
-        if z3.is_int( expr ):
-            return self.solver.mkVar( self.solver.getIntegerSort(), str( expr ) )
-
-        if z3.is_real( expr ):
-            return self.solver.mkVar( self.solver.getRealSort(), str( expr ) )
-
-        if z3.is_int_value( expr ):
-            return self.solver.mkInteger( expr.as_long() )
-
-        if z3.is_rational_value( expr ):
-            return self.solver.mkReal( expr.as_double() )
-
-        if z3.is_algebraic_value( expr ):
-            return self.solver.mkReal( expr.as_double() )
+            c0, I = self.z3_to_cvc5( expr.children()[ 0 ], I )
+            c1, I = self.z3_to_cvc5( expr.children()[ 1 ], I )
+            return self.solver.mkTerm( pycvc5.kinds.Forall, c0, c1 ), I
 
         if z3.is_add( expr ):
-            c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
+            c0, I = self.z3_to_cvc5( expr.children()[ 0 ], I )
+            c1, I = self.z3_to_cvc5( expr.children()[ 1 ], I )
 
-            c = expr.children[ 0 ]
+            c = expr.children()[ 0 ]
             if z3.is_bv( c ) or z3.is_bv_value( c ):
-                return self.solver.mkTerm( pycvc5.kinds.BVAdd, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.BVAdd, c0, c1 ), I
             elif z3.is_fp( c ) or z3.is_fp_value( c ) or z3.is_fprm( c ) or z3.is_fprm_value( c ):
-                return self.solver.mkTerm( pycvc5.kinds.FPAdd, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.FPAdd, c0, c1 ), I
             else:
-                return self.solver.mkTerm( pycvc5.kinds.Plus, c0, c1  )
+                return self.solver.mkTerm( pycvc5.kinds.Plus, c0, c1  ), I
 
         if z3.is_mul( expr ):
-            c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
+            c0, I = self.z3_to_cvc5( expr.children()[ 0 ], I )
+            c1, I = self.z3_to_cvc5( expr.children()[ 1 ], I )
 
-            c = expr.children[ 0 ]
+            c = expr.children()[ 0 ]
             if z3.is_bv( c ) or z3.is_bv_value( c ):
-                return self.solver.mkTerm( pycvc5.kinds.BVMult, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.BVMult, c0, c1 ), I
             elif z3.is_fp( c ) or z3.is_fp_value( c ) or z3.is_fprm( c ) or z3.is_fprm_value( c ):
-                return self.solver.mkTerm( pycvc5.kinds.FPMult, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.FPMult, c0, c1 ), I
             else:
-                return self.solver.mkTerm( pycvc5.kinds.Mult, c0, c1  )
+                return self.solver.mkTerm( pycvc5.kinds.Mult, c0, c1  ), I
 
         if z3.is_sub( expr ):
-            c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
+            c0, I = self.z3_to_cvc5( expr.children()[ 0 ], I )
+            c1, I = self.z3_to_cvc5( expr.children()[ 1 ], I )
 
-            c = expr.children[ 0 ]
+            c = expr.children()[ 0 ]
             if z3.is_bv( c ) or z3.is_bv_value( c ):
-                return self.solver.mkTerm( pycvc5.kinds.BVSub, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.BVSub, c0, c1 ), I
             elif z3.is_fp( c ) or z3.is_fp_value( c ) or z3.is_fprm( c ) or z3.is_fprm_value( c ):
-                return self.solver.mkTerm( pycvc5.kinds.FPSub, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.FPSub, c0, c1 ), I
             else:
-                return self.solver.mkTerm( pycvc5.kinds.Minus, c0, c1  )
+                return self.solver.mkTerm( pycvc5.kinds.Minus, c0, c1  ), I
 
         if z3.is_div( expr ):
             pass
@@ -253,167 +274,237 @@ class Oracle():
             pass
 
         # signed le
-        if str( expr.decl() ) == '<':
-            c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
+        if hasattr( expr, 'decl' ) and str( expr.decl() ) == '<=':
+            c0, I = self.z3_to_cvc5( expr.children()[ 0 ], I )
+            c1, I = self.z3_to_cvc5( expr.children()[ 1 ], I )
 
-            c = expr.children[ 0 ]
+            c = expr.children()[ 0 ]
             if z3.is_bv( c ) or z3.is_bv_value( c ):
-                return self.solver.mkTerm( pycvc5.kinds.BVSle, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.BVSle, c0, c1 ), I
             elif z3.is_fp( c ) or z3.is_fp_value( c ) or z3.is_fprm( c ) or z3.is_fprm_value( c ):
-                return self.solver.mkTerm( pycvc5.kinds.FPSle, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.FPSle, c0, c1 ), I
             else:
-                return self.solver.mkTerm( pycvc5.kinds.LEQ, c0, c1  )
+                return self.solver.mkTerm( pycvc5.kinds.LEQ, c0, c1  ), I
 
         # unsigned le
-        if str( expr.decl() ) == 'ULE':
-            c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
+        if hasattr( expr, 'decl' ) and str( expr.decl() ) == 'ULE':
+            c0, I = self.z3_to_cvc5( expr.children()[ 0 ], I )
+            c1, I = self.z3_to_cvc5( expr.children()[ 1 ], I )
 
-            c = expr.children[ 0 ]
+            c = expr.children()[ 0 ]
             if z3.is_bv( c ) or z3.is_bv_value( c ):
-                return self.solver.mkTerm( pycvc5.kinds.BVUle, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.BVUle, c0, c1 ), I
             elif z3.is_fp( c ) or z3.is_fp_value( c ) or z3.is_fprm( c ) or z3.is_fprm_value( c ):
-                return self.solver.mkTerm( pycvc5.kinds.FPUle, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.FPUle, c0, c1 ), I
             else:
-                return self.solver.mkTerm( pycvc5.kinds.LEQ, c0, c1  )
+                return self.solver.mkTerm( pycvc5.kinds.LEQ, c0, c1  ), I
 
         # signed lt
-        if str( expr.decl() ) == '<':
-            c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
+        if hasattr( expr, 'decl' ) and str( expr.decl() ) == '<':
+            c0, I = self.z3_to_cvc5( expr.children()[ 0 ], I )
+            c1, I = self.z3_to_cvc5( expr.children()[ 1 ], I )
 
-            c = expr.children[ 0 ]
+            c = expr.children()[ 0 ]
             if z3.is_bv( c ) or z3.is_bv_value( c ):
-                return self.solver.mkTerm( pycvc5.kinds.BVSlt, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.BVSlt, c0, c1 ), I
             elif z3.is_fp( c ) or z3.is_fp_value( c ) or z3.is_fprm( c ) or z3.is_fprm_value( c ):
-                return self.solver.mkTerm( pycvc5.kinds.FPSlt, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.FPSlt, c0, c1 ), I
             else:
-                return self.solver.mkTerm( pycvc5.kinds.LT, c0, c1  )
+                return self.solver.mkTerm( pycvc5.kinds.LT, c0, c1  ), I
 
         # unsigned lt
-        if str( expr.decl() ) == 'ULE':
-            c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
+        if hasattr( expr, 'decl' ) and str( expr.decl() ) == 'ULT':
+            c0, I = self.z3_to_cvc5( expr.children()[ 0 ], I )
+            c1, I = self.z3_to_cvc5( expr.children()[ 1 ], I )
 
-            c = expr.children[ 0 ]
+            c = expr.children()[ 0 ]
             if z3.is_bv( c ) or z3.is_bv_value( c ):
-                return self.solver.mkTerm( pycvc5.kinds.BVUlt, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.BVUlt, c0, c1 ), I
             elif z3.is_fp( c ) or z3.is_fp_value( c ) or z3.is_fprm( c ) or z3.is_fprm_value( c ):
-                return self.solver.mkTerm( pycvc5.kinds.FPUlt, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.FPUlt, c0, c1 ), I
             else:
-                return self.solver.mkTerm( pycvc5.kinds.LT, c0, c1  )
+                return self.solver.mkTerm( pycvc5.kinds.LT, c0, c1  ), I
 
         # signed ge
-        if str( expr.decl() ) == '<':
-            c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
+        if hasattr( expr, 'decl' ) and str( expr.decl() ) == '>=':
+            c0, I = self.z3_to_cvc5( expr.children()[ 0 ], I )
+            c1, I = self.z3_to_cvc5( expr.children()[ 1 ], I )
 
-            c = expr.children[ 0 ]
+            c = expr.children()[ 0 ]
             if z3.is_bv( c ) or z3.is_bv_value( c ):
-                return self.solver.mkTerm( pycvc5.kinds.BVSge, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.BVSge, c0, c1 ), I
             elif z3.is_fp( c ) or z3.is_fp_value( c ) or z3.is_fprm( c ) or z3.is_fprm_value( c ):
-                return self.solver.mkTerm( pycvc5.kinds.FPSge, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.FPSge, c0, c1 ), I
             else:
-                return self.solver.mkTerm( pycvc5.kinds.GEQ, c0, c1  )
+                return self.solver.mkTerm( pycvc5.kinds.GEQ, c0, c1  ), I
 
         # unsigned ge
-        if str( expr.decl() ) == 'ULE':
-            c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
+        if hasattr( expr, 'decl' ) and str( expr.decl() ) == 'UGE':
+            c0, I = self.z3_to_cvc5( expr.children()[ 0 ], I )
+            c1, I = self.z3_to_cvc5( expr.children()[ 1 ], I )
 
-            c = expr.children[ 0 ]
+            c = expr.children()[ 0 ]
             if z3.is_bv( c ) or z3.is_bv_value( c ):
-                return self.solver.mkTerm( pycvc5.kinds.BVUge, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.BVUge, c0, c1 ), I
             elif z3.is_fp( c ) or z3.is_fp_value( c ) or z3.is_fprm( c ) or z3.is_fprm_value( c ):
-                return self.solver.mkTerm( pycvc5.kinds.FPUge, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.FPUge, c0, c1 ), I
             else:
-                return self.solver.mkTerm( pycvc5.kinds.GEQ, c0, c1  )
+                return self.solver.mkTerm( pycvc5.kinds.GEQ, c0, c1  ), I
 
         # signed gt
-        if str( expr.decl() ) == '<':
-            c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
+        if hasattr( expr, 'decl' ) and str( expr.decl() ) == '>':
+            c0, I = self.z3_to_cvc5( expr.children()[ 0 ], I )
+            c1, I = self.z3_to_cvc5( expr.children()[ 1 ], I )
 
-            c = expr.children[ 0 ]
+            c = expr.children()[ 0 ]
             if z3.is_bv( c ) or z3.is_bv_value( c ):
-                return self.solver.mkTerm( pycvc5.kinds.BVSgt, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.BVSgt, c0, c1 ), I
             elif z3.is_fp( c ) or z3.is_fp_value( c ) or z3.is_fprm( c ) or z3.is_fprm_value( c ):
-                return self.solver.mkTerm( pycvc5.kinds.FPSgt, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.FPSgt, c0, c1 ), I
             else:
-                return self.solver.mkTerm( pycvc5.kinds.GT, c0, c1  )
+                return self.solver.mkTerm( pycvc5.kinds.GT, c0, c1  ), I
 
         # unsigned gt
-        if str( expr.decl() ) == 'ULE':
-            c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
+        if hasattr( expr, 'decl' ) and str( expr.decl() ) == 'UGT':
+            c0, I = self.z3_to_cvc5( expr.children()[ 0 ], I )
+            c1, I = self.z3_to_cvc5( expr.children()[ 1 ], I )
 
-            c = expr.children[ 0 ]
+            c = expr.children()[ 0 ]
             if z3.is_bv( c ) or z3.is_bv_value( c ):
-                return self.solver.mkTerm( pycvc5.kinds.BVUgt, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.BVUgt, c0, c1 ), I
             elif z3.is_fp( c ) or z3.is_fp_value( c ) or z3.is_fprm( c ) or z3.is_fprm_value( c ):
-                return self.solver.mkTerm( pycvc5.kinds.FPUgt, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.FPUgt, c0, c1 ), I
             else:
-                return self.solver.mkTerm( pycvc5.kinds.GT, c0, c1  )
+                return self.solver.mkTerm( pycvc5.kinds.GT, c0, c1  ), I
 
-        if z3.is_bv( expr ):
-            return self.solver.mkVar( self.solver.mkBitVectorSort( expr.size() ), str( expr ) )
+        # bitvector ops
+        if hasattr( expr, 'decl' ) and str( expr.decl() ) == 'Extract':
+            c0, I = self.z3_to_cvc5( expr.children()[ 0 ], I )
+            ex = self.solver.mkOp( pycvc5.kinds.BVExtract, expr.params()[ 0 ], expr.params()[ 1 ] )
+            return self.solver.mkTerm( ex, c0 ), I
 
-        if z3.is_bv_value( expr ):
-            return self.solver.mkBitVec( expr.size() )
+        # bitvector ops
+        if hasattr( expr, 'decl' ) and str( expr.decl() ) == 'ZeroExt':
+            c0, I = self.z3_to_cvc5( expr.children()[ 0 ], I )
+            ex = self.solver.mkOp( pycvc5.kinds.BVZeroExtend, expr.params()[ 0 ] )
+            return self.solver.mkTerm( ex, c0 ), I
 
-        if z3.is_array( expr ):
-            return self.solver.mkTerm( pycvc5.kinds.Array, z3_to_cvc5( expr.domain() ), z3_to_cvc5( expr.range() ) )
-
-        if z3.is_const_array( expr ):
-            pass
-
-        if z3.is_K( expr ):
-            pass
-
-        if z3.is_map( expr ):
-            pass
+        # bitvector ops
+        if hasattr( expr, 'decl' ) and str( expr.decl() ) == 'Concat':
+            c0, I = self.z3_to_cvc5( expr.children()[ 0 ], I )
+            c1, I = self.z3_to_cvc5( expr.children()[ 1 ], I )
+            return self.solver.mkTerm( pycvc5.kinds.BVConcat, c0, c1 ), I
 
         if z3.is_select( expr ):
-            c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
-            return self.solver.mkTerm( pycvc5.kinds.Select, c0, c1 )
+            c0, I = self.z3_to_cvc5( expr.children()[ 0 ], I )
+            c1, I = self.z3_to_cvc5( expr.children()[ 1 ], I )
+            return self.solver.mkTerm( pycvc5.kinds.Select, c0, c1 ), I
 
         if z3.is_store( expr ):
-            c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
-            return self.solver.mkTerm( pycvc5.kinds.Store, c0, c1 )
+            c0, I = self.z3_to_cvc5( expr.children()[ 0 ], I )
+            c1, I = self.z3_to_cvc5( expr.children()[ 1 ], I )
+            c2, I = self.z3_to_cvc5( expr.children()[ 1 ], I )
+            return self.solver.mkTerm( pycvc5.kinds.Store, c0, c1, c2 ), I
 
-        if z3.is_finite_domain( expr ):
+        if z3.is_seq( expr ):
             pass
+
+        # CONSTS
+
+        if z3.is_true( expr ):
+            return self.solver.mkTrue(), I
+
+        if z3.is_false( expr ):
+            return self.solver.mkFalse(), I
+
+        if z3.is_int_value( expr ):
+            return self.solver.mkInteger( expr.as_long() ), I
+
+        if z3.is_rational_value( expr ):
+            return self.solver.mkReal( expr.as_double() ), I
+
+        if z3.is_algebraic_value( expr ):
+            return self.solver.mkReal( expr.as_double() ), I
+
+        if z3.is_bv_value( expr ):
+            return self.solver.mkBitVector( expr.size(), expr.as_long() ), I
 
         if z3.is_finite_domain_value( expr ):
-            pass
-
-        if z3.is_fprm( expr ):
             pass
 
         if z3.is_fprm_value( expr ):
             pass
 
-        if z3.is_fp( expr ):
-            pass
-
         if z3.is_fp_value( expr ):
-            pass
-
-        if z3.is_seq( expr ):
-            pass
-
-        if z3.is_string( expr ):
             pass
 
         if z3.is_string_value( expr ):
             pass
 
+        if z3.is_const_array( expr ) or z3.is_K:
+            pass
+
+        # VARS
+
+        if z3.is_bool( expr ):
+            v = self.solver.mkVar( self.solver.getBooleanSort(), str( expr ) )
+            I[ s ] = v
+            return v, I
+
+        if z3.is_int( expr ):
+            v = self.solver.mkVar( self.solver.getIntegerSort(), str( expr ) )
+            I[ s ] = v
+            return v, I
+
+        if z3.is_real( expr ):
+            v = self.solver.mkVar( self.solver.getRealSort(), str( expr ) )
+            I[ s ] = v
+            return v, I
+
+        if z3.is_array( expr ):
+            d, I = self.z3_to_cvc5( expr.domain(), I )
+            r, I = self.z3_to_cvc5( expr.range(), I )
+            v = self.solver.mkVar( self.solver.mkArraySort( d, r ), str( expr ) )
+            I[ s ] = v
+            return v, I
+
+        if z3.is_map( expr ):
+            pass
+
+        if z3.is_bv( expr ):
+            v = self.solver.mkVar( self.solver.mkBitVectorSort( expr.size() ), str( expr ) )
+            I[ s ] = v
+            return v, I
+
+        if z3.is_finite_domain( expr ):
+            pass
+
+        if z3.is_fprm( expr ):
+            pass
+
+        if z3.is_fp( expr ):
+            pass
+
+        if z3.is_string( expr ):
+            pass
+
+        # SORTS
+
         if z3.is_arith_sort( expr ):
             if expr.is_int():
-                return self.solver.getIntegerSort()
+                return self.solver.getIntegerSort(), I
             elif expr.is_real():
-                return self.solver.getRealSort()
+                return self.solver.getRealSort(), I
             else:
                 pass # todo: handle
 
         if z3.is_bv_sort( expr ):
-            return self.solver.mkBitVectorSort( expr.size() )
+            return self.solver.mkBitVectorSort( expr.size() ), I
 
         if z3.is_array_sort( expr ):
-            return self.solver.mkArraySort( z3_to_cvc5( expr.domain() ), z3_to_cvc5( expr.range() ) )
+            d, I = self.z3_to_cvc5( expr.domain(), I )
+            r, I = self.z3_to_cvc5( expr.range(), I )
+            return self.solver.mkArraySort( d, r ), I
 
         if z3.is_finite_domain_sort( expr ):
             pass
@@ -423,6 +514,145 @@ class Oracle():
 
         if z3.is_fprm_sort( expr ):
             pass
+
+
+    def prep_sygus( self, I ):
+
+        # set options
+        self.solver.setOption( 'lang', 'sygus2' )
+        self.solver.setOption( 'incremental', 'false' )
+
+        # set logic
+        self.solver.setLogic( 'QF_AUFBV' )
+
+        # add all input vars not in formulas to sygus context
+        for v in self.E._fields:
+            if v in I:
+                continue
+            _, I = self.z3_to_cvc5( getattr( self.E, v ) )
+
+        for v in self.S._fields:
+            if v in I:
+                continue
+            _, I = self.z3_to_cvc5( getattr( self.S, v ) )
+
+        # define grammar terminals
+        gbool = self.solver.mkVar( self.solver.getBooleanSort(), "Bool" )
+        gint  = self.solver.mkVar( self.solver.getIntegerSort(), "Int" )
+        garr  = self.solver.mkVar( self.solver.mkArraySort( self.solver.mkBitVectorSort( 32 ),
+                                                            self.solver.mkBitVectorSort(  8 ) ), "Arr" )
+        gbvl  = self.solver.mkVar( self.solver.mkBitVectorSort( 32 ), "BVLong" )
+        gbvm2 = self.solver.mkVar( self.solver.mkBitVectorSort( 24 ), "BVMid2" )
+        gbvm1 = self.solver.mkVar( self.solver.mkBitVectorSort( 16 ), "BVMid1" )
+        gbvs  = self.solver.mkVar( self.solver.mkBitVectorSort(  8 ), "BVShort" )
+
+        # make grammar
+        g = self.solver.mkSygusGrammar( list( I.values() ), [ gbool, gint, garr, gbvl, gbvm2, gbvm1, gbvs ] )
+
+        # define int rules
+        Z   = self.solver.mkInteger( 0 )
+        O   = self.solver.mkInteger( 1 )
+        Add = self.solver.mkTerm( pycvc5.kinds.Plus,  gint, gint )
+        Mul = self.solver.mkTerm( pycvc5.kinds.Mult,  gint, gint )
+        Sub = self.solver.mkTerm( pycvc5.kinds.Minus, gint, gint )
+
+        g.addRules( gint, { Z, O, Add, Mul, Sub } )
+
+        # define array rule
+        BvStore = self.solver.mkTerm( pycvc5.kinds.Store,  garr, gbvl, gbvs )
+        g.addRules( garr, { BvStore } )
+
+        # define bitvector rules
+        BvlAdd = self.solver.mkTerm( pycvc5.kinds.BVAdd,  gbvl, gbvl )
+        BvlMul = self.solver.mkTerm( pycvc5.kinds.BVMult, gbvl, gbvl )
+        BvlSub = self.solver.mkTerm( pycvc5.kinds.BVSub,  gbvl, gbvl )
+        BvsAdd = self.solver.mkTerm( pycvc5.kinds.BVAdd,  gbvs, gbvs )
+        BvsMul = self.solver.mkTerm( pycvc5.kinds.BVMult, gbvs, gbvs )
+        BvsSub = self.solver.mkTerm( pycvc5.kinds.BVSub,  gbvs, gbvs )
+
+        #BvlExtract = self.solver.mkTerm( self.solver.mkOp( pycvc5.kinds.BVExtract, gint, gint ), gbvl )
+        #BvlZeroExt = self.solver.mkTerm( self.solver.mkOp( pycvc5.kinds.BVZeroExtend, gint ), gbvl )
+        #BvsExtract = self.solver.mkTerm( self.solver.mkOp( pycvc5.kinds.BVExtract, gint, gint ), gbvs )
+        #BvsZeroExt = self.solver.mkTerm( self.solver.mkOp( pycvc5.kinds.BVZeroExtend, gint ), gbvs )
+
+        BvsConcat  = self.solver.mkTerm( pycvc5.kinds.BVConcat, gbvs,  gbvs )
+        Bvm1Concat = self.solver.mkTerm( pycvc5.kinds.BVConcat, gbvm1, gbvs )
+        Bvm2Concat = self.solver.mkTerm( pycvc5.kinds.BVConcat, gbvm2, gbvs )
+
+        BvsSelect  = self.solver.mkTerm( pycvc5.kinds.Select, garr, gbvl )
+
+        #g.addRules( gbvl, { BvlAdd, BvlMul, BvlSub, BvlExtract, BvlZeroExt, BVlConcat, BvlSelect } )
+        #g.addRules( gbvs, { BvsAdd, BvsMul, BvsSub, BvsExtract, BvsZeroExt, BVsConcat } )
+        g.addRules( gbvl,  { BvlAdd, BvlMul, BvlSub, Bvm2Concat } )
+        g.addRules( gbvm2, { Bvm1Concat } )
+        g.addRules( gbvm1, { BvsConcat } )
+        g.addRules( gbvs,  { BvsAdd, BvsMul, BvsSub, BvsSelect } )
+
+        # define boolean rules
+        And     = self.solver.mkTerm( pycvc5.kinds.And, gbool, gbool )
+        Or      = self.solver.mkTerm( pycvc5.kinds.Or,  gbool, gbool )
+        Not     = self.solver.mkTerm( pycvc5.kinds.Not, gbool )
+        Implies = self.solver.mkTerm( pycvc5.kinds.Implies, gbool, gbool )
+        _True   = self.solver.mkTrue()
+        _False  = self.solver.mkFalse()
+
+        IntSle = self.solver.mkTerm( pycvc5.kinds.Leq,    gint, gint )
+        IntSlt = self.solver.mkTerm( pycvc5.kinds.Lt,     gint, gint )
+        IntSge = self.solver.mkTerm( pycvc5.kinds.Geq,    gint, gint )
+        IntSgt = self.solver.mkTerm( pycvc5.kinds.Gt,     gint, gint )
+        BvlSle  = self.solver.mkTerm( pycvc5.kinds.BVSle, gbvl, gbvl )
+        BvlUle  = self.solver.mkTerm( pycvc5.kinds.BVUle, gbvl, gbvl )
+        BvlSlt  = self.solver.mkTerm( pycvc5.kinds.BVSlt, gbvl, gbvl )
+        BvlUlt  = self.solver.mkTerm( pycvc5.kinds.BVUlt, gbvl, gbvl )
+        BvlSge  = self.solver.mkTerm( pycvc5.kinds.BVSge, gbvl, gbvl )
+        BvlUge  = self.solver.mkTerm( pycvc5.kinds.BVUge, gbvl, gbvl )
+        BvlSgt  = self.solver.mkTerm( pycvc5.kinds.BVSgt, gbvl, gbvl )
+        BvlUgt  = self.solver.mkTerm( pycvc5.kinds.BVUgt, gbvl, gbvl )
+        BvsSle  = self.solver.mkTerm( pycvc5.kinds.BVSle, gbvs, gbvs )
+        BvsUle  = self.solver.mkTerm( pycvc5.kinds.BVUle, gbvs, gbvs )
+        BvsSlt  = self.solver.mkTerm( pycvc5.kinds.BVSlt, gbvs, gbvs )
+        BvsUlt  = self.solver.mkTerm( pycvc5.kinds.BVUlt, gbvs, gbvs )
+        BvsSge  = self.solver.mkTerm( pycvc5.kinds.BVSge, gbvs, gbvs )
+        BvsUge  = self.solver.mkTerm( pycvc5.kinds.BVUge, gbvs, gbvs )
+        BvsSgt  = self.solver.mkTerm( pycvc5.kinds.BVSgt, gbvs, gbvs )
+        BvsUgt  = self.solver.mkTerm( pycvc5.kinds.BVUgt, gbvs, gbvs )
+
+        g.addRules( gbool, { And, Or, Not, Implies, _True, _False,
+                             IntSle, IntSlt, IntSge, IntSgt,
+                             BvlSle, BvlUle, BvlSlt, BvlUlt, BvlSge, BvlUge, BvlSgt, BvlUgt,
+                             BvsSle, BvsUle, BvsSlt, BvsUlt, BvsSge, BvsUge, BvsSgt, BvsUgt } )
+
+        return g
+
+
+    # copied from https://github.com/cvc5/cvc5/blob/39f90ff035a5e5024fe0cd11b965f1103d83e88d/examples/api/python/utils.py
+    def print_synthd( self, terms, solutions ):
+
+        def define_fun_to_string( f, params, body ):
+            sort = f.getSort()
+            if sort.isFunction():
+                sort = f.getSort().getFunctionCodomainSort()
+                result = ""
+                result += "(define-fun " + str( f ) + " ("
+                for param in params:
+                    if i > 0:
+                        result += " "
+                    else:
+                        result += "(" + str( param ) + " " + str( param.getSort() ) + ")"
+            result += ") " + str( sort ) + " " + str( body ) + ")"
+            return result
+
+
+        result = ""
+        for i, term in enumerate( terms ):
+            params = []
+            if solutions[ i ].getKind() == pycvc5.kinds.Lambda:
+                params += solutions[ i ][ 0 ]
+                body    = solutions[ i ][ 1 ]
+            result += "  " + define_fun_to_string( term, params, body ) + "\n"
+            print( result )
+
+        return
 
 
     def run( self ):
@@ -450,10 +680,10 @@ class Oracle():
     def ocf( self ):
         self.solver.add(
             z3.And(
-                z3.And( phi, vphi, pi ),
+                z3.And( self.phi(), self.vphi(), self.pi() ),
                 z3.Implies(
-                    z3.And( phi, vphi, pi ),
-                    beta ) ) )
+                    z3.And( self.phi(), self.vphi(), self.pi() ),
+                    self.beta() ) ) )
 
         unsat = ( self.solver.check() == z3.unsat )
 
@@ -462,6 +692,45 @@ class Oracle():
 
             for var in list( self.E ) + list( self.S ) + list( self.P ):
                 model.eval( var, model_completion = True )
+
+
+    def ncf( self ):
+
+        phi,  I = self.z3_to_cvc5( self.phi() )
+        vphi, I = self.z3_to_cvc5( self.vphi(), I )
+        pi,   _ = self.z3_to_cvc5( self.pi() )
+        beta, _ = self.z3_to_cvc5( self.beta() )
+
+        if not phi:
+            phi  = self.solver.mkTrue()
+
+        if not vphi:
+            vphi = self.solver.mkTrue()
+
+        g = self.prep_sygus( I )
+
+        # define target function
+        nf = self.solver.synthFun( "necessary", list( I.values() ), self.solver.getBooleanSort(), g )
+
+        # invoke as uninterpretated function for use with semantic constraint
+        args = [ self.solver.mkSygusVar( i.getSort(), str( i ) ) for i in I.values() ]
+        necc = self.solver.mkTerm( pycvc5.kinds.ApplyUf, nf, *args )
+
+        self.solver.addSygusConstraint(
+            self.solver.mkTerm( pycvc5.kinds.And,
+                                self.solver.mkTerm( pycvc5.kinds.And, [ necc, phi, vphi, pi ] ),
+                                self.solver.mkTerm( pycvc5.kinds.Implies,
+                                                    self.solver.mkTerm( pycvc5.kinds.And, [ necc, phi, vphi, pi ] ),
+                                                    beta ) ) )
+                                                    
+
+        if ( self.solver.checkSynth().isUnsat() ):
+            terms = [ nf ]
+            #self.print_synthd( terms, self.solver.getSynthSolutions( terms ) )
+            
+
+    def scf( self ):
+        pass
 
 
 

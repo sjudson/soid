@@ -1,15 +1,19 @@
 import soidlib
 
-from ..mw import *
+from ..mw import declare, start
 
 
-def query_type():
-    return soidlib.counterfactual.necessary
+soid = soidlib.Soid( 'nothing', soidlib.counterfactual.necessary )
 
 
 def descriptor():
     return 'An agent was never observed actually pressing the start button. What conditons are necessary for it to do so?'
 
 
-def behavior( E, S, P ):
-    return ( P.decision == start )
+def behavior( P ):
+    return soid.Equal( P.decision, start )
+
+
+soid.register( descriptor )
+soid.register( declare )
+soid.register( behavior )
