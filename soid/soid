@@ -97,7 +97,7 @@ class Oracle():
 
     def build_pi( self ):
 
-        symbls  = [ soidlib.types.util.bv32arr( '__soid__' +  p.__str__() ) for p in self.P ]
+        symbls  = [ soidlib.types.util.bv32arr( '__soid__' + str( p ) ) for p in self.P ]
         amends  = [ soidlib.types.util.bv32arr_to_bv32( p ) == soidlib.types.util.bv32arr_to_bv32( symbls[ i ] ) for i, p in enumerate( self.P ) ]
 
         amended = [ z3.And( [ path ] + amends ) for path in self.paths ]
@@ -159,7 +159,7 @@ class Oracle():
     def z3_to_cvc5( self, expr ):
 
         if z3.is_bool( expr ):
-            return self.solver.mkVar( solver.getBooleanSort(), expr.__str__ )
+            return self.solver.mkVar( self.solver.getBooleanSort(), str( expr ) )
 
         if z3.is_true( expr ):
             return self.solver.mkTrue()
@@ -169,37 +169,37 @@ class Oracle():
 
         if z3.is_and( expr ):
             c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
-            return self.solver.mkTerm( kinds.And, c0, c1 )
+            return self.solver.mkTerm( pycvc5.kinds.And, c0, c1 )
 
         if z3.is_or( expr ):
             c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
-            return self.solver.mkTerm( kinds.Or, c0, c1 )
+            return self.solver.mkTerm( pycvc5.kinds.Or, c0, c1 )
 
         if z3.is_implies( expr ):
             c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
-            return self.solver.mkTerm( kinds.Implies, c0, c1 )
+            return self.solver.mkTerm( pycvc5.kinds.Implies, c0, c1 )
 
         if z3.is_not( expr ):
             c0 = z3_to_cvc5( expr.children[ 0 ] )
-            return self.solver.mkTerm( kinds.Not, c0 )
+            return self.solver.mkTerm( pycvc5.kinds.Not, c0 )
 
         if z3.is_eq( expr ):
             c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
-            return self.solver.mkTerm( kinds.Equal, c0, c1 )
+            return self.solver.mkTerm( pycvc5.kinds.Equal, c0, c1 )
 
         if is_quantifier( expr ) and expr.is_exists():
             c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
-            return self.solver.mkTerm( kinds.Exists, c0, c1 )
+            return self.solver.mkTerm( pycvc5.kinds.Exists, c0, c1 )
 
         if is_quantifier( expr ) and expr.is_forall():
             c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
-            return self.solver.mkTerm( kinds.Forall, c0, c1 )
+            return self.solver.mkTerm( pycvc5.kinds.Forall, c0, c1 )
 
         if is_int( expr ):
-            return self.solver.mkVar( solver.getIntegerSort(), expr.__str__ )
+            return self.solver.mkVar( self.solver.getIntegerSort(), str( expr ) )
 
         if is_real( expr ):
-            return self.solver.mkVar( solver.getRealSort(), expr.__str__ )
+            return self.solver.mkVar( self.solver.getRealSort(), str( expr ) )
 
         if is_int_value( expr ):
             return self.solver.mkInteger( expr.as_long() )
@@ -215,33 +215,33 @@ class Oracle():
 
             c = expr.children[ 0 ]
             if z3.is_bv( c ) or z3.is_bv_value( c ):
-                return self.solver.mkTerm( kinds.BVAdd, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.BVAdd, c0, c1 )
             elif z3.is_fp( c ) or z3.is_fp_value( c ) or z3.is_fprm( c ) or z3.is_fprm_value( c ):
-                return self.solver.mkTerm( kinds.FPAdd, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.FPAdd, c0, c1 )
             else:
-                return self.solver.mkTerm( kinds.Plus, c0, c1  )
+                return self.solver.mkTerm( pycvc5.kinds.Plus, c0, c1  )
 
         if is_mul( expr ):
             c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
 
             c = expr.children[ 0 ]
             if z3.is_bv( c ) or z3.is_bv_value( c ):
-                return self.solver.mkTerm( kinds.BVMult, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.BVMult, c0, c1 )
             elif z3.is_fp( c ) or z3.is_fp_value( c ) or z3.is_fprm( c ) or z3.is_fprm_value( c ):
-                return self.solver.mkTerm( kinds.FPMult, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.FPMult, c0, c1 )
             else:
-                return self.solver.mkTerm( kinds.Mult, c0, c1  )
+                return self.solver.mkTerm( pycvc5.kinds.Mult, c0, c1  )
 
         if is_sub( expr ):
             c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
 
             c = expr.children[ 0 ]
             if z3.is_bv( c ) or z3.is_bv_value( c ):
-                return self.solver.mkTerm( kinds.BVSub, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.BVSub, c0, c1 )
             elif z3.is_fp( c ) or z3.is_fp_value( c ) or z3.is_fprm( c ) or z3.is_fprm_value( c ):
-                return self.solver.mkTerm( kinds.FPSub, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.FPSub, c0, c1 )
             else:
-                return self.solver.mkTerm( kinds.Minus, c0, c1  )
+                return self.solver.mkTerm( pycvc5.kinds.Minus, c0, c1  )
 
         if is_div( expr ):
             pass
@@ -258,11 +258,11 @@ class Oracle():
 
             c = expr.children[ 0 ]
             if z3.is_bv( c ) or z3.is_bv_value( c ):
-                return self.solver.mkTerm( kinds.BVSle, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.BVSle, c0, c1 )
             elif z3.is_fp( c ) or z3.is_fp_value( c ) or z3.is_fprm( c ) or z3.is_fprm_value( c ):
-                return self.solver.mkTerm( kinds.FPSle, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.FPSle, c0, c1 )
             else:
-                return self.solver.mkTerm( kinds.LEQ, c0, c1  )
+                return self.solver.mkTerm( pycvc5.kinds.LEQ, c0, c1  )
 
         # unsigned le
         if str( expr.decl() ) == 'ULE':
@@ -270,11 +270,11 @@ class Oracle():
 
             c = expr.children[ 0 ]
             if z3.is_bv( c ) or z3.is_bv_value( c ):
-                return self.solver.mkTerm( kinds.BVUle, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.BVUle, c0, c1 )
             elif z3.is_fp( c ) or z3.is_fp_value( c ) or z3.is_fprm( c ) or z3.is_fprm_value( c ):
-                return self.solver.mkTerm( kinds.FPUle, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.FPUle, c0, c1 )
             else:
-                return self.solver.mkTerm( kinds.LEQ, c0, c1  )
+                return self.solver.mkTerm( pycvc5.kinds.LEQ, c0, c1  )
 
         # signed lt
         if str( expr.decl() ) == '<':
@@ -282,11 +282,11 @@ class Oracle():
 
             c = expr.children[ 0 ]
             if z3.is_bv( c ) or z3.is_bv_value( c ):
-                return self.solver.mkTerm( kinds.BVSlt, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.BVSlt, c0, c1 )
             elif z3.is_fp( c ) or z3.is_fp_value( c ) or z3.is_fprm( c ) or z3.is_fprm_value( c ):
-                return self.solver.mkTerm( kinds.FPSlt, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.FPSlt, c0, c1 )
             else:
-                return self.solver.mkTerm( kinds.LT, c0, c1  )
+                return self.solver.mkTerm( pycvc5.kinds.LT, c0, c1  )
 
         # unsigned lt
         if str( expr.decl() ) == 'ULE':
@@ -294,11 +294,11 @@ class Oracle():
 
             c = expr.children[ 0 ]
             if z3.is_bv( c ) or z3.is_bv_value( c ):
-                return self.solver.mkTerm( kinds.BVUlt, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.BVUlt, c0, c1 )
             elif z3.is_fp( c ) or z3.is_fp_value( c ) or z3.is_fprm( c ) or z3.is_fprm_value( c ):
-                return self.solver.mkTerm( kinds.FPUlt, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.FPUlt, c0, c1 )
             else:
-                return self.solver.mkTerm( kinds.LT, c0, c1  )
+                return self.solver.mkTerm( pycvc5.kinds.LT, c0, c1  )
 
         # signed ge
         if str( expr.decl() ) == '<':
@@ -306,11 +306,11 @@ class Oracle():
 
             c = expr.children[ 0 ]
             if z3.is_bv( c ) or z3.is_bv_value( c ):
-                return self.solver.mkTerm( kinds.BVSge, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.BVSge, c0, c1 )
             elif z3.is_fp( c ) or z3.is_fp_value( c ) or z3.is_fprm( c ) or z3.is_fprm_value( c ):
-                return self.solver.mkTerm( kinds.FPSge, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.FPSge, c0, c1 )
             else:
-                return self.solver.mkTerm( kinds.GEQ, c0, c1  )
+                return self.solver.mkTerm( pycvc5.kinds.GEQ, c0, c1  )
 
         # unsigned ge
         if str( expr.decl() ) == 'ULE':
@@ -318,11 +318,11 @@ class Oracle():
 
             c = expr.children[ 0 ]
             if z3.is_bv( c ) or z3.is_bv_value( c ):
-                return self.solver.mkTerm( kinds.BVUge, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.BVUge, c0, c1 )
             elif z3.is_fp( c ) or z3.is_fp_value( c ) or z3.is_fprm( c ) or z3.is_fprm_value( c ):
-                return self.solver.mkTerm( kinds.FPUge, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.FPUge, c0, c1 )
             else:
-                return self.solver.mkTerm( kinds.GEQ, c0, c1  )
+                return self.solver.mkTerm( pycvc5.kinds.GEQ, c0, c1  )
 
         # signed gt
         if str( expr.decl() ) == '<':
@@ -330,11 +330,11 @@ class Oracle():
 
             c = expr.children[ 0 ]
             if z3.is_bv( c ) or z3.is_bv_value( c ):
-                return self.solver.mkTerm( kinds.BVSgt, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.BVSgt, c0, c1 )
             elif z3.is_fp( c ) or z3.is_fp_value( c ) or z3.is_fprm( c ) or z3.is_fprm_value( c ):
-                return self.solver.mkTerm( kinds.FPSgt, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.FPSgt, c0, c1 )
             else:
-                return self.solver.mkTerm( kinds.GT, c0, c1  )
+                return self.solver.mkTerm( pycvc5.kinds.GT, c0, c1  )
 
         # unsigned gt
         if str( expr.decl() ) == 'ULE':
@@ -342,20 +342,20 @@ class Oracle():
 
             c = expr.children[ 0 ]
             if z3.is_bv( c ) or z3.is_bv_value( c ):
-                return self.solver.mkTerm( kinds.BVUgt, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.BVUgt, c0, c1 )
             elif z3.is_fp( c ) or z3.is_fp_value( c ) or z3.is_fprm( c ) or z3.is_fprm_value( c ):
-                return self.solver.mkTerm( kinds.FPUgt, c0, c1 )
+                return self.solver.mkTerm( pycvc5.kinds.FPUgt, c0, c1 )
             else:
-                return self.solver.mkTerm( kinds.GT, c0, c1  )
+                return self.solver.mkTerm( pycvc5.kinds.GT, c0, c1  )
 
         if is_bv( expr ):
-            return self.solver.mkVar( solver.mkBitVectorSort( expr.size() ), expr.__str__ )
+            return self.solver.mkVar( self.solver.mkBitVectorSort( expr.size() ), str( expr ) )
 
         if is_bv_value( expr ):
             return self.solver.mkBitVec( expr.size() )
 
         if is_array( expr ):
-            pass
+            return self.solver.mkTerm( pycvc5.kinds.Array, z3_to_cvc5( expr.domain() ), z3_to_cvc5( expr.range() ) )
 
         if is_const_array( expr ):
             pass
@@ -367,10 +367,12 @@ class Oracle():
             pass
 
         if is_select( expr ):
-            pass
+            c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
+            return self.solver.mkTerm( pycvc5.kinds.Select, c0, c1 )
 
         if is_store( expr ):
-            pass
+            c0, c1 = z3_to_cvc5( expr.children[ 0 ] ), z3_to_cvc5( expr.children[ 1 ] )
+            return self.solver.mkTerm( pycvc5.kinds.Store, c0, c1 )
 
         if is_finite_domain( expr ):
             pass
@@ -385,7 +387,7 @@ class Oracle():
             pass
 
         if is_fp( expr ):
-            return self.solver.mkVar( solver.mkFloatingPointSort( expr.ebits, expr.sbits ), expr.__str__ )
+            pass
 
         if is_fp_value( expr ):
             pass
@@ -399,14 +401,36 @@ class Oracle():
         if is_string_value( expr ):
             pass
 
+        if is_arith_sort( expr ):
+            if expr.is_int():
+                return self.solver.getIntegerSort()
+            elif expr.is_real():
+                return self.solver.getRealSort()
+            else:
+                pass # todo: handle
+
+        if is_bv_sort( expr ):
+            return self.solver.mkBitVectorSort( expr.size() )
+
+        if is_array_sort( expr ):
+            return self.solver.mkArraySort( z3_to_cvc5( expr.domain() ), z3_to_cvc5( expr.range() ) )
+
+        if is_finite_domain_sort( expr ):
+            pass
+
+        if is_fp_sort( expr ):
+            pass
+
+        if is_fprm_sort( expr ):
+            pass
+
+
 
     def run( self ):
         self.runners[ self.type ]() # todo: handle error case
 
 
     def verif( self ):
-        self.z3_to_cvc5( self.pi() )
-
         self.solver.add(
             z3.Not(
                 z3.And(
