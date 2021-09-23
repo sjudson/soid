@@ -12,12 +12,12 @@ def descriptor():
 
 def environmental( E ):
     obs = soid.And( soid.Equal( E.error, True ),
-                       soid.Equal( E.close, False ),
-                       soid.Equal( E.heat,  False ),
-                       soid.Equal( E.start, True ) )
+                    soid.Equal( E.close, False ),
+                    soid.Equal( E.heat,  False ),
+                    soid.Equal( E.start, True ) )
 
     qry = soid.And( soid.Equal( E.error, True ),
-                       soid.Equal( E.start, True ) )
+                    soid.Equal( E.start, True ) )
 
     return qry, obs
 

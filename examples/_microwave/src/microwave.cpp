@@ -46,7 +46,7 @@ int main( int argc, char *argv[] ) {
 
   klee_make_symbolic( &__soid__decision, sizeof( __soid__decision ), "__soid__decision" );
 
-  klee_assume( error == 1 );
+  //klee_assume( error == 1 );
 
   decision = decide( &started, start, close, heat, error );
 
