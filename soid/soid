@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-from queue import LifoQueue
 from collections import namedtuple
 
 import soidlib
@@ -32,6 +31,8 @@ class Oracle():
             #soidlib.behavior.sufficient       : self.sbv,
             #soidlib.agent                     : self.agent
         }
+
+        self.introduction = ''
 
         self.reset()
         return
@@ -145,8 +146,8 @@ class Oracle():
         query._Soid__oracle( self )
 
         # extract mangled
-        self.name   = query._Soid__name
-        self.type   = query._Soid__type
+        self.name   = query.query_name
+        self.type   = query.query_type
         self.synth  = ( self.type not in [ soidlib.verification, soidlib.counterfactual.single ] )
         self.solver = z3.Solver() if not self.synth else pycvc5.Solver()
 
@@ -642,7 +643,7 @@ class Oracle():
 
 
     def run( self ):
-        self.runners[ self.type ]() # todo: handle error case
+        self.runners[ self.type ]()  # todo: handle error case
 
 
     def verif( self ):
@@ -714,9 +715,6 @@ class Oracle():
             self.print_synthd( terms, self.solver.getSynthSolutions( terms ) )
 
 
-
-
-
     def scf( self ):
         pass
 
@@ -738,8 +736,6 @@ def parse_args():
                          help = 'Location of program makefile; if not a resolveable path soid will attempt to load ./Makefile.' )
     parser.add_argument( '-qs', '-queries', action = 'store', type = str, default = None, dest = 'queries', required = True, \
                          help = 'Location of queries directory; if not a resolveable path soid will attempt to use ./')
-    parser.add_argument( '-q', '--query', action = 'store', type = str, default = None, nargs = '*', dest = 'query', required = False, \
-                         help = 'List of queries from directory to execute; if this parameter is not provided then all are attempted.' )
     parser.add_argument( '-n', '--enum', action = 'store', type = int, default = 100, dest = 'enum', required = False, \
                          help = 'Number of candidates to enumerate, used for sufficient synthesis queries.' )
 
@@ -748,28 +744,28 @@ def parse_args():
     if not os.path.exists( args.make ):
         args.make  = './Makefile'
     if not os.path.exists( args.queries ):
-        args.query = './'
+        args.queries = './'
 
     return args
+    
 
+def extract( qs, args, oracle, queue = [] ):
 
-
-def extract( qs, args, queue = LifoQueue() ):
-
-    if 'soidlib' not in dir( qs ):
+    if 'Soid' not in dir( qs ) and 'soidlib' not in dir( qs ):
         return queue
 
     for name in dir( qs ):
         obj = getattr( qs, name )
 
+        if callable( obj ) and name == 'introduction':
+            oracle.introduction = obj()  # todo: handle error case
+
         if isinstance( obj, types.ModuleType ):
-            queue = extract( obj, args, queue )
+            queue = extract( obj, args, oracle, queue )
 
         if isinstance( obj, soidlib.Soid ):
-            #todo: fix
-            #if args.query and qs.__name__ not in args.query:
-            #    continue
-            queue.put( obj )
+            if not obj.skip:
+                queue.append( obj )
 
     return queue
 
@@ -780,15 +776,19 @@ if __name__ == '__main__':
     oracle = Oracle()
     args = parse_args()
 
+    # todo: rework once symbolize is done
     oracle.ld_agnt( args.make )
 
     path, fn = os.path.split( args.queries )
     sys.path.insert( 0, path )
     qs = importlib.import_module( fn )
 
-    queries = extract( qs, args )
+    queries = extract( qs, args, oracle )
+    queries.sort( key = lambda query: query.priority, reverse = True )
 
-    while not queries.empty():
-        nxt = queries.get()
+    print( oracle.introduction )
+
+    while queries:
+        nxt = queries.pop()
         oracle.load( nxt )
         oracle.run()

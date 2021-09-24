@@ -27,19 +27,19 @@ agent          = 6
 
 
 
-def bv32arr( x ):
+def _bv32arr( x ):
     return z3.Array( x, z3.BitVecSort( 32 ), z3.BitVecSort( 8 ) )
 
 
-def cint_to_bv32( x ):
+def _cint_to_bv32( x ):
     return z3.BitVecVal( 1 * x, 32 )   # implicit bool conversion
 
 
-def cbool_to_bv32( x ):
-    return cint_to_bv32( x )
+def _cbool_to_bv32( x ):
+    return _cint_to_bv32( x )
 
 
-def bv32arr_to_bv32( x ):
+def _bv32arr_to_bv32( x ):
     return z3.Concat( z3.Select( x, z3.BitVecVal( 3, 32 ) ),
                       z3.Select( x, z3.BitVecVal( 2, 32 ) ),
                       z3.Select( x, z3.BitVecVal( 1, 32 ) ),
@@ -48,18 +48,70 @@ def bv32arr_to_bv32( x ):
 
 def _bv32( v ):
     if isinstance( v, str ):                             # if given a name then create a new array-based variable
-        return bv32arr( v )
+        return _bv32arr( v )
     elif isinstance( v, bool ) or isinstance( v, int ):  # otherwise treat as a constant
-        return cint_to_bv32( v )
+        return _cint_to_bv32( v )
     else:
         pass # todo: handle
 
 
-_tyu   = namedtuple( 'tyutil', [ 'bv32arr', 'int_to_bv32', 'bool_to_bv32', 'bv32arr_to_bv32' ] )
-tyutil = _tyu( bv32arr = bv32arr, int_to_bv32 = cint_to_bv32, bool_to_bv32 = cbool_to_bv32, bv32arr_to_bv32 = bv32arr_to_bv32 )
+def _type_resolve( args ):
 
-_ty    = namedtuple( 'types', [ 'bool', 'int', 'u32', 'util' ] )
-types  = _ty( bool = _bv32, int = _bv32, u32 = _bv32, util = tyutil )
+    largs = list( args )
+    for i, arg in enumerate( args ):
+        if isinstance( arg, bool ) or isinstance( arg, bool ):
+            largs[ i ] = _cint_to_bv32( arg )
+
+        if isinstance( arg, z3.z3.ArrayRef ):
+            largs[ i ] = _bv32arr_to_bv32( arg )
+
+        # todo: any other cases?
+    return tuple( largs )
+
+
+_tyu    = namedtuple( 'tyutil', [ 'bv32arr', 'int_to_bv32', 'bool_to_bv32', 'bv32arr_to_bv32' ] )
+_tyutil = _tyu( bv32arr = _bv32arr, int_to_bv32 = _cint_to_bv32, bool_to_bv32 = _cbool_to_bv32, bv32arr_to_bv32 = _bv32arr_to_bv32 )
+
+_ty     = namedtuple( 'types', [ 'bool', 'int', 'u32', 'util' ] )
+types   = _ty( bool = _bv32, int = _bv32, u32 = _bv32, util = _tyutil )
+
+
+
+####################
+##### SYMBOLS ######
+####################
+
+
+
+_and = chr(int('2227', 16))
+_or  = chr(int('2228', 16))
+_not = chr(int('00AC', 16))
+_imp = chr(int('2192', 16))
+_iff = chr(int('27F7', 16))
+_xor = chr(int('2295', 16))
+_dom = chr(int('1D53B', 16))
+_t   = chr(int('22A4', 16))
+_f   = chr(int('22A5', 16))
+_uni = chr(int('2200', 16))
+_exi = chr(int('2203', 16))
+_nex = chr(int('2204', 16))
+_def = chr(int('2254', 16))
+_prv = chr(int('22A2', 16))
+_npv = chr(int('22AC', 16))
+_mod = chr(int('22A8', 16))
+_nmd = chr(int('22AD', 16))
+_ctf = chr(int('25A1', 16)) + _imp
+
+_sym    = namedtuple( 'symbols', [ 'land', 'lor', 'lnot', 'implies', 'iff', 'xor', 'domain', 'defi', 'true', 'false', 'universal',
+                                   'existential', 'not_existential', 'proves', 'not_proves', 'models', 'not_models', 'counterfactual' ] )
+symbols = _sym( land = _and, lor = _or, lnot = _not, xor = _xor,
+                implies = _imp, iff = _iff,
+                domain = _dom,
+                defi = _def,
+                true = _t, false = _f,
+                universal = _uni, existential = _exi, not_existential = _nex,
+                proves = _prv, not_proves = _npv, models = _mod, not_models = _nmd,
+                counterfactual = _ctf )
 
 
 
@@ -68,14 +120,37 @@ types  = _ty( bool = _bv32, int = _bv32, u32 = _bv32, util = tyutil )
 ####################
 
 
+##### START Z3 Wrappers (with typecasting) #####
+#
+# todos: add more + handle error cases
+
+def Equal( *args ):
+    args = _type_resolve( args )
+    return ( args[ 0 ] == args[ 1 ] )
+
+
+def And( *args ):
+    args = _type_resolve( args )
+    return z3.And( *args )
+
+
+def Or( *args ):
+    args = _type_resolve( args )
+    return z3.Or( *args )
+
+##### END WRAPPERS ######
+
 
 class Soid():
 
-    def __init__( self, qn, qt ):
+    def __init__( self, query_name, query_type, priority = float( 'inf' ), skip = False ):
 
-        self.__name  = qn
-        self.__type  = qt
-        self.__synth = ( qt not in [ verification, counterfactual.single ] )
+        self.query_name = query_name
+        self.query_type = query_type
+        self.__synth = ( query_type not in [ verification, counterfactual.single ] )
+
+        self.priority = priority
+        self.skip     = skip
 
         self.__regmap = {
             'descriptor'    : self.__reg_desc,
@@ -135,44 +210,21 @@ class Soid():
         self.__behavior_info = inspect.getfullargspec( f )
 
 
-    def __type_resolve( self, args ):
-
-        largs = list( args )
-        for i, arg in enumerate( args ):
-            if isinstance( arg, bool ) or isinstance( arg, bool ):
-                largs[ i ] = cint_to_bv32( arg )
-
-            if isinstance( arg, z3.z3.ArrayRef ):
-                largs[ i ] = bv32arr_to_bv32( arg )
-
-            # todo: any other cases?
-
-        return tuple( largs )
-
-
-
     ########################
     ##### USER METHODS #####
     ########################
 
-    # todo: handle various error cases
-
     def register( self, f ):
         self.__regmap[ f.__name__ ]( f )
 
+    def description( self, f ):
+        self.__reg_desc( f )
 
-    def Equal( self, *args ):
-        args = self.__type_resolve( args )
-        return ( args[ 0 ] == args[ 1 ] )
+    def environmental( self, f ):
+        self.__reg_env( f )
 
+    def state( self, f ):
+        self.__reg_st( f )
 
-    def And( self, *args ):
-        args = self.__type_resolve( args )
-        return z3.And( *args )
-
-
-    def Or( self, *args ):
-        args = self.__type_resolve( args )
-        return z3.Or( *args )
-
-    # todo: add more
+    def behavior( self, f ):
+        self.__reg_bhv( f )

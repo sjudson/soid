@@ -1,30 +1,28 @@
-import soidlib
+from soidlib import *
 
 from .mw import declare, cancel, dclose
 
 
-soid = soidlib.Soid( 'resolve.2', soidlib.verification )
+soid = Soid( 'resolve.2', verification, priority = 2 )
+soid.register( declare )
 
 
+@soid.register
 def descriptor():
     return 'When the agent observes an error, will they always try to resolve it? Resolution is understood as either a) closing the door, or b) pushing cancel.'
 
 
+@soid.register
 def environmental( E ):
-    return soid.Equal( E.error, True )
+    return Equal( E.error, True )
 
 
+@soid.register
 def state( S ):
     return True
 
 
+@soid.register
 def behavior( E, S, P ):
-    return soid.Or( soid.Equal( P.decision, cancel ),
-                    soid.Equal( P.decision, dclose ) )
-
-
-soid.register( descriptor )
-soid.register( declare )
-soid.register( environmental )
-soid.register( state )
-soid.register( behavior )
+    return Or( Equal( P.decision, cancel ),
+               Equal( P.decision, dclose ) )
