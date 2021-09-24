@@ -20,6 +20,7 @@ def introduction():
         f'\n\t                                                                                                                  '
         f'\n\t               error {soidlib.symbols.counterfactual} cancel                                                      '
         f'\n\t                                                                                                                  '
+        f'\n\t         However, note that the operator has five decisions available -- it can (i) cancel the run; (ii) open the '
         f'\n\t         door; (iii) close the door; (iv) push start; or (v) do nothing -- the choice to close the door could also'
         f'\n\t         be a reasonable action consistent with an attempt to resolve the error before any damage occurs. Closing '
         f'\n\t         the door when possible could resolve the error in and of itself, and at the very least could help contain'
