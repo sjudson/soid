@@ -28,7 +28,7 @@ def introduction():
         f'\n\t                                                                                                                  '
         f'\n\t               '
 
-        f'( ( error {soidlib.symbols.land} door open ) {soidlib.symbols.counterfactual} close door ) {soidlib.symbols.implies}  '
+        f'( ( error {soidlib.symbols.land} door open ) {soidlib.symbols.counterfactual} close door ) {soidlib.symbols.implies} '
         f'( ( error {soidlib.symbols.land} door closed ) {soidlib.symbols.counterfactual} push cancel )'
 
         f'\n\t                                                                                                                  '

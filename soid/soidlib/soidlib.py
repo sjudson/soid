@@ -102,7 +102,7 @@ def _bv32( decl ):
 
 def _fbool( val ):
     var = z3.BoolVal( val )
-    setattr( var, 'soid_pp', str( val ) )
+    setattr( var, 'soid_pp', symbols.true if val else symbols.false )
     return var
 
 
