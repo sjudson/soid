@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from colorama import Fore, Style
 from collections import namedtuple
 
 import soidlib
@@ -32,6 +33,7 @@ class Oracle():
             #soidlib.agent                     : self.agent
         }
 
+        self.ct  = 0
         self.introduction = ''
 
         self.reset()
@@ -140,6 +142,7 @@ class Oracle():
 
     def load( self, query ):
 
+        self.ct += 1
         self.reset()
 
         # register as oracle for query
@@ -430,7 +433,7 @@ class Oracle():
         if z3.is_string_value( expr ):
             pass
 
-        if z3.is_const_array( expr ) or z3.is_K:
+        if z3.is_const_array( expr ) or z3.is_K( expr ):
             pass
 
         # VARS
@@ -612,8 +615,67 @@ class Oracle():
         return g
 
 
+    # todo: either get beautifHOL working or reimplement it in Python
+    def query_pp( self, name, query ):
+
+        if isinstance( query, bool ):
+            formula = soidlib.symbols.true if query else soidlib.symbols.false
+        else:
+            formula = query.soid_pp
+
+        if name == 'phi':
+            print( f'\n\t                 environmental ({soidlib.symbols.phi}). {formula}' )
+        elif name == 'vphi':
+            print( f'\n\t                         state ({soidlib.symbols.vphi}). {formula}' )
+        elif name == 'beta':
+            print( f'\n\t                      behavior ({soidlib.symbols.beta}). {formula}' )
+
+        return
+
+
+    def model_recurse( self, expr, tier = 3 ):
+
+        # todo: make robust
+        if z3.is_store( expr ) or z3.is_K( expr ):
+            if len( expr.children() ) == 1 and isinstance( expr.children()[ 0 ], z3.BitVecNumRef ):
+                    return expr.children()[ 0 ].as_long()
+
+            if len( expr.children() ) == 3:
+                if z3.is_K( expr.children()[ 0 ] ) and isinstance( expr.children()[ 2 ], z3.BitVecNumRef ):
+                    return expr.children()[ 2 ].as_long()
+
+                elif z3.is_store( expr.children()[ 0 ] ) and isinstance( expr.children()[ 2 ], z3.BitVecNumRef ):
+                    return ( expr.children()[ 2 ].as_long() << tier ) + self.model_recurse( expr.children()[ 0 ], tier - 1 )
+
+
+    def model_pp( self, model ):
+        vs = [ d for d in model.decls() if '__soid__' not in d.name() ]
+        nl = max( [ len( d.name() ) for d in vs ] )
+
+        for v in vs:
+            val   = self.model_recurse( model[ v ] )
+
+            ref   = [ vr for vr in ( self.E + self.S + self.P ) if str( vr ) == v.name() ].pop()
+            btype = ref.soid_base
+
+            if btype == 'bool':
+                val = soidlib.symbols.true if val == 1 else soidlib.symbols.false
+
+            if btype == 'u32':
+                val = str( val )
+
+            name = v.name().rjust( nl )
+            if hasattr( ref, 'soid_val_pp' ) and val in ref.soid_val_pp:
+                val = ref.soid_val_pp[ val ]
+
+            print( f'\n\t                 {name}. {val}' )
+
+        exit()
+        return
+
+
     # copied from https://github.com/cvc5/cvc5/blob/39f90ff035a5e5024fe0cd11b965f1103d83e88d/examples/api/python/utils.py
-    def print_synthd( self, terms, solutions ):
+    def synthd_pp( self, terms, solutions ):
 
         def define_fun_to_string( f, params, body ):
             sort = f.getSort()
@@ -646,22 +708,57 @@ class Oracle():
         self.runners[ self.type ]()  # todo: handle error case
 
 
+    def verif_pp( self, unsat, model = None ):
+        mark  = chr(int('2713', 16)) if unsat else chr(int('2717', 16))
+        color = Fore.GREEN if unsat else Fore.RED
+
+        print(
+            f'\n\t                                                                                                              '
+            f'\n\t{str(self.ct).zfill(7)}.  |  name: {self.name}  |  type: verification                                         '
+        )
+        print( self.description )
+        print(
+            f'\n\t                result: [{color}{mark}{Style.RESET_ALL}]                                                      '
+            f'\n\t                                                                                                              '
+            f'\n\tconstraints:                                                                                                  '
+            f'\n\t                                                                                                              '
+        )
+
+        self.query_pp( 'phi',  self.phi() )
+        self.query_pp( 'vphi', self.vphi() )
+        self.query_pp( 'beta', self.beta() )
+
+        if not unsat and model:
+            print(
+                f'\n\t                                                                                                          '
+                f'\n\tcounterexample:                                                                                           '
+                f'\n\t                                                                                                          '
+            )
+            self.model_pp( model )
+
+        print(
+            f'\n\t                                                                                                              '
+        )
+
+
     def verif( self ):
         self.solver.add(
             z3.Not(
-                z3.And(
+                z3.Implies(
                     z3.And( self.phi(), self.vphi(), self.pi() ),
-                    z3.Implies(
-                        z3.And( self.phi(), self.vphi(), self.pi() ),
-                        self.beta() ) ) ) )
+                    self.beta() ) ) )
+
 
         unsat = ( self.solver.check() == z3.unsat )
+        if unsat:
+            return self.verif_pp( unsat )
 
-        if not unsat:
-            model = self.solver.model()
+        model = self.solver.model()
 
-            for var in list( self.E ) + list( self.S ) + list( self.P ):
-                model.eval( var, model_completion = True )
+        for var in list( self.E ) + list( self.S ) + list( self.P ):
+            model.eval( var, model_completion = True )
+
+        return self.verif_pp( unsat, model )
 
 
     def ocf( self ):
@@ -673,12 +770,13 @@ class Oracle():
                     self.beta() ) ) )
 
         unsat = ( self.solver.check() == z3.unsat )
+        if unsat:
+            pass
 
-        if not unsat:
-            model = self.solver.model()
+        model = self.solver.model()
 
-            for var in list( self.E ) + list( self.S ) + list( self.P ):
-                model.eval( var, model_completion = True )
+        for var in list( self.E ) + list( self.S ) + list( self.P ):
+            model.eval( var, model_completion = True )
 
 
     def ncf( self ):
@@ -712,7 +810,7 @@ class Oracle():
 
         if ( self.solver.checkSynth().isUnsat() ):
             terms = [ nf ]
-            self.print_synthd( terms, self.solver.getSynthSolutions( terms ) )
+            self.synthd_pp( terms, self.solver.getSynthSolutions( terms ) )
 
 
     def scf( self ):
@@ -747,7 +845,7 @@ def parse_args():
         args.queries = './'
 
     return args
-    
+
 
 def extract( qs, args, oracle, queue = [] ):
 

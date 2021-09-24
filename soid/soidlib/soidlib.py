@@ -26,7 +26,6 @@ agent          = 6
 ######################
 
 
-
 def _bv32arr( x ):
     return z3.Array( x, z3.BitVecSort( 32 ), z3.BitVecSort( 8 ) )
 
@@ -46,34 +45,99 @@ def _bv32arr_to_bv32( x ):
                       z3.Select( x, z3.BitVecVal( 0, 32 ) ) )
 
 
-def _bv32( v ):
-    if isinstance( v, str ):                             # if given a name then create a new array-based variable
-        return _bv32arr( v )
-    elif isinstance( v, bool ) or isinstance( v, int ):  # otherwise treat as a constant
-        return _cint_to_bv32( v )
-    else:
-        pass # todo: handle
+def _bv32( decl ):
+
+    if decl == 'bool':
+        def __inner( v, val = None, pp = None ):
+            if isinstance( v, str ):
+                var = _cbool_to_bv32( val ) if val else _bv32arr( v )  # named variable
+                setattr( var, 'soid_base', 'bool' )
+
+                if val:                                                # named constant
+                    setattr( var, 'soid_pp', v )
+
+                if pp:
+                    setattr( var, 'soid_val_pp', pp )
+                return var
+
+            elif isinstance( v, bool ):                                # anonymous constant
+                var = _cbool_to_bv32( v )
+                setattr( var, 'soid_base', 'bool' )
+                setattr( var, 'soid_pp', str( v ) )
+
+                if pp:
+                    setattr( var, 'soid_val_pp', pp )
+                return var
+
+            else:
+                pass # todo: handle
+        return __inner
+
+    if decl == 'int' or decl == 'u32':
+        def __inner( v, val = None, pp = None ):
+            if isinstance( v, str ):
+                var = _cint_to_bv32( val ) if val else _bv32arr( v )  # named variable
+                setattr( var, 'soid_base', 'u32' )
+
+                if val:                                               # named constant
+                    setattr( var, 'soid_pp', v )
+
+                if pp:
+                    setattr( var, 'soid_val_pp', pp )
+                return var
+
+            elif isinstance( v, bool ):                               # anonymous constant
+                var = _cint_to_bv32( v )
+                setattr( var, 'soid_base', 'u32' )
+                setattr( var, 'soid_pp', str( v ) )
+
+                if pp:
+                    setattr( var, 'soid_val_pp', pp )
+                return var
+
+            else:
+                pass # todo: handle
+        return __inner
+
+
+def _fbool( val ):
+    var = z3.BoolVal( val )
+    setattr( var, 'soid_pp', str( val ) )
+    return var
 
 
 def _type_resolve( args ):
 
-    largs = list( args )
+    largs  = list( args )
+    sargs  = [ str( arg ) for arg in largs ]
+    
+    pretty = None
     for i, arg in enumerate( args ):
-        if isinstance( arg, bool ) or isinstance( arg, bool ):
+        if isinstance( arg, bool ):
+            sargs[ i ] = symbols.true if arg else symbols.false
             largs[ i ] = _cint_to_bv32( arg )
 
-        if isinstance( arg, z3.z3.ArrayRef ):
+        elif isinstance( arg, z3.z3.ArrayRef ):
             largs[ i ] = _bv32arr_to_bv32( arg )
 
+            if hasattr( arg, 'soid_val_pp' ):
+                pretty = arg.soid_val_pp
+
         # todo: any other cases?
-    return tuple( largs )
+
+    if pretty:
+        for i, sarg in enumerate( sargs ):
+            if sarg in pretty.keys():
+                sargs[ i ] = pretty[ sarg ]
+
+    return tuple( largs ), tuple( sargs )
 
 
 _tyu    = namedtuple( 'tyutil', [ 'bv32arr', 'int_to_bv32', 'bool_to_bv32', 'bv32arr_to_bv32' ] )
 _tyutil = _tyu( bv32arr = _bv32arr, int_to_bv32 = _cint_to_bv32, bool_to_bv32 = _cbool_to_bv32, bv32arr_to_bv32 = _bv32arr_to_bv32 )
 
 _ty     = namedtuple( 'types', [ 'bool', 'int', 'u32', 'util' ] )
-types   = _ty( bool = _bv32, int = _bv32, u32 = _bv32, util = _tyutil )
+types   = _ty( bool = _bv32( 'bool' ), int = _bv32( 'int' ), u32 = _bv32( 'u32' ), util = _tyutil )
 
 
 
@@ -102,8 +166,13 @@ _mod = chr(int('22A8', 16))
 _nmd = chr(int('22AD', 16))
 _ctf = chr(int('25A1', 16)) + _imp
 
-_sym    = namedtuple( 'symbols', [ 'land', 'lor', 'lnot', 'implies', 'iff', 'xor', 'domain', 'defi', 'true', 'false', 'universal',
-                                   'existential', 'not_existential', 'proves', 'not_proves', 'models', 'not_models', 'counterfactual' ] )
+_phi  = chr(int('1D719', 16))
+_vphi = chr(int('1D711', 16))
+_pi   = chr(int('1D6F1', 16))
+_beta = chr(int('1D6FD', 16))
+
+_sym    = namedtuple( 'symbols', [ 'land', 'lor', 'lnot', 'implies', 'iff', 'xor', 'domain', 'defi', 'true', 'false', 'universal', 'existential',
+                                   'not_existential', 'proves', 'not_proves', 'models', 'not_models', 'counterfactual', 'phi', 'vphi', 'pi', 'beta' ] )
 symbols = _sym( land = _and, lor = _or, lnot = _not, xor = _xor,
                 implies = _imp, iff = _iff,
                 domain = _dom,
@@ -111,7 +180,8 @@ symbols = _sym( land = _and, lor = _or, lnot = _not, xor = _xor,
                 true = _t, false = _f,
                 universal = _uni, existential = _exi, not_existential = _nex,
                 proves = _prv, not_proves = _npv, models = _mod, not_models = _nmd,
-                counterfactual = _ctf )
+                counterfactual = _ctf,
+                phi = _phi, vphi = _vphi, pi = _pi, beta = _beta )
 
 
 
@@ -125,18 +195,41 @@ symbols = _sym( land = _and, lor = _or, lnot = _not, xor = _xor,
 # todos: add more + handle error cases
 
 def Equal( *args ):
-    args = _type_resolve( args )
-    return ( args[ 0 ] == args[ 1 ] )
+    args, sargs = _type_resolve( args )
+
+    eqn = ( args[ 0 ] == args[ 1 ] )
+    setattr( eqn, 'soid_pp', f'( {sargs[0]} == {sargs[1]} )' )
+
+    return eqn
 
 
 def And( *args ):
-    args = _type_resolve( args )
-    return z3.And( *args )
+    args, sargs = _type_resolve( args )
+
+    eqn = z3.And( *args )
+    setattr( eqn, 'soid_pp', '( {} )'.format( f' {symbols.land} '.join( sargs ) ) )
+
+    return eqn
 
 
 def Or( *args ):
-    args = _type_resolve( args )
-    return z3.Or( *args )
+    args, sargs = _type_resolve( args )
+
+    eqn = z3.Or( *args )
+    setattr( eqn, 'soid_pp', '( {} )'.format( f' {symbols.lor} '.join( sargs ) ) )
+
+    return eqn
+
+
+def Not( *args ):
+    args, sargs = _type_resolve( args )
+
+    eqn = z3.Not( args[ 0 ] )
+    setattr( eqn, 'soid_pp', f'{symbols.lnot}{sargs[0]}' )
+
+    return eqn
+
+
 
 ##### END WRAPPERS ######
 
@@ -174,7 +267,9 @@ class Soid():
 
 
     def __reg_decl( self, f ):
+
         def __inner( *args, **kwargs ):
+
             E, S, P = f( *args, **kwargs )
             if E:
                 self.oracle.E = self.__varset( E )
@@ -182,31 +277,71 @@ class Soid():
                 self.oracle.S = self.__varset( S )
             if P:
                 self.oracle.P = self.__varset( P )
+
+            self.__Eext = None
+            self.__Sext = None
+            cbools, _ = _type_resolve( ( True, False ) )
+            for var in self.oracle.E:
+                if var.soid_base == 'bool':
+                    varg, _ = _type_resolve( ( var, ) )
+                    const = Or( Equal( varg[ 0 ], cbools[ 0 ] ), Equal( varg[ 0 ], cbools[ 1 ] ) )
+                    self.__Eext = And( self.__Eext, const ) if self.__Eext != None else const
+
+            for var in self.oracle.S:
+                if var.soid_base == 'bool':
+                    varg, _ = _type_resolve( ( var, ) )
+                    const = Or( Equal( varg[ 0 ], cbools[ 0 ] ), Equal( varg[ 0 ], cbools[ 1 ] ) )
+                    self.__Sext = And( self.__Sext, const ) if self.__Sext != None else const
+
             return
 
         self.__declare = __inner
 
 
-    def __wrap( self, f ):
+    def __reg_desc( self, f ):
         def __inner( *args, **kwargs ):
             return f( *args, **kwargs )
-        return __inner
 
-
-    def __reg_desc( self, f ):
-        self.__descriptor = self.__wrap( f )
+        self.__descriptor = __inner
 
 
     def __reg_env( self, f ):
-        self.__environmental = self.__wrap( f )
+        def __inner( *args, **kwargs ):
+            eqn = f( *args, **kwargs )
+            if isinstance( eqn, bool ):
+                eqn = _fbool( eqn )
+
+            if self.__Eext == None:
+                return eqn
+
+            neqn = And( eqn, self.__Eext )
+            setattr( neqn, 'soid_pp', eqn.soid_pp )
+
+            return neqn
+        self.__environmental = __inner
 
 
     def __reg_st( self, f ):
-        self.__state = self.__wrap( f )
+        def __inner( *args, **kwargs ):
+            eqn = f( *args, **kwargs )
+            if isinstance( eqn, bool ):
+                eqn = _fbool( eqn )
+                
+            neqn = And( eqn, self.__Sext )
+            setattr( neqn, 'soid_pp', eqn.soid_pp )
+
+            return neqn
+        self.__state = __inner
 
 
     def __reg_bhv( self, f ):
-        self.__behavior      = self.__wrap( f )
+        def __inner( *args, **kwargs ):
+            eqn = f( *args, **kwargs )
+            if isinstance( eqn, bool ):
+                eqn = _fbool( eqn )
+
+            return eqn
+        self.__behavior      = __inner
         self.__behavior_info = inspect.getfullargspec( f )
 
 
