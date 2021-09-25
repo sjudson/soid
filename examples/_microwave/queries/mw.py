@@ -64,7 +64,6 @@ def declare():
                                                              '1' : 'push cancel',
                                                              '2' : 'open door',
                                                              '3' : 'close door',
-                                                             '4' : 'do nothing'   } )
-    }
+                                                             '4' : 'do nothing'   } ) }
 
     return E, S, P
