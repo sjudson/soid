@@ -113,9 +113,18 @@ def _type_resolve( args ):
     
     pretty = None
     for i, arg in enumerate( args ):
+
         if isinstance( arg, bool ):
             sargs[ i ] = symbols.true if arg else symbols.false
+            largs[ i ] = _cbool_to_bv32( arg )
+
+        elif isinstance( arg, int ):
+            sargs[ i ] = str( arg )
             largs[ i ] = _cint_to_bv32( arg )
+
+        elif isinstance( arg, z3.z3.BoolRef ):
+            if hasattr( arg, 'soid_pp' ):
+                sargs[ i ] = arg.soid_pp
 
         elif isinstance( arg, z3.z3.ArrayRef ):
             largs[ i ] = _bv32arr_to_bv32( arg )
@@ -125,6 +134,7 @@ def _type_resolve( args ):
 
         # todo: any other cases?
 
+    # pretty print special variable values
     if pretty:
         for i, sarg in enumerate( sargs ):
             if sarg in pretty.keys():
@@ -147,29 +157,29 @@ types   = _ty( bool = _bv32( 'bool' ), int = _bv32( 'int' ), u32 = _bv32( 'u32' 
 
 
 
-_and = chr(int('2227', 16))
-_or  = chr(int('2228', 16))
-_not = chr(int('00AC', 16))
-_imp = chr(int('2192', 16))
-_iff = chr(int('27F7', 16))
-_xor = chr(int('2295', 16))
-_dom = chr(int('1D53B', 16))
-_t   = chr(int('22A4', 16))
-_f   = chr(int('22A5', 16))
-_uni = chr(int('2200', 16))
-_exi = chr(int('2203', 16))
-_nex = chr(int('2204', 16))
-_def = chr(int('2254', 16))
-_prv = chr(int('22A2', 16))
-_npv = chr(int('22AC', 16))
-_mod = chr(int('22A8', 16))
-_nmd = chr(int('22AD', 16))
-_ctf = chr(int('25A1', 16)) + _imp
+_and = chr( int( '2227', 16 ) )
+_or  = chr( int( '2228', 16) )
+_not = chr( int( '00AC', 16) )
+_imp = chr( int( '2192', 16) )
+_iff = chr( int( '27F7', 16) )
+_xor = chr( int( '2295', 16) )
+_dom = chr( int( '1D53B', 16) )
+_t   = chr( int( '22A4', 16) )
+_f   = chr( int( '22A5', 16) )
+_uni = chr( int( '2200', 16) )
+_exi = chr( int( '2203', 16) )
+_nex = chr( int( '2204', 16) )
+_def = chr( int( '2254', 16) )
+_prv = chr( int( '22A2', 16) )
+_npv = chr( int( '22AC', 16) )
+_mod = chr( int( '22A8', 16) )
+_nmd = chr( int( '22AD', 16) )
+_ctf = chr( int( '25A1', 16) ) + _imp
 
-_phi  = chr(int('1D719', 16))
-_vphi = chr(int('1D711', 16))
-_pi   = chr(int('1D6F1', 16))
-_beta = chr(int('1D6FD', 16))
+_phi  = chr( int( '1D719', 16) )
+_vphi = chr( int( '1D711', 16) )
+_pi   = chr( int( '1D6F1', 16) )
+_beta = chr( int( '1D6FD', 16) )
 
 _sym    = namedtuple( 'symbols', [ 'land', 'lor', 'lnot', 'implies', 'iff', 'xor', 'domain', 'defi', 'true', 'false', 'universal', 'existential',
                                    'not_existential', 'proves', 'not_proves', 'models', 'not_models', 'counterfactual', 'phi', 'vphi', 'pi', 'beta' ] )

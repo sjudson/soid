@@ -670,7 +670,6 @@ class Oracle():
 
             print( f'\n\t                 {name}. {val}' )
 
-        exit()
         return
 
 

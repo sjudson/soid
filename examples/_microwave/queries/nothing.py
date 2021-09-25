@@ -10,7 +10,7 @@ soid.register( declare )
 @soid.register
 def descriptor():
     return (
-        f'\n\tquestion: When the agent observes an error, will they never just do nothing?                                      '
+        f'\n\tquestion: When the agent observes an error, will they always do something (i.e., never do nothing)?               '
     )
 
 
