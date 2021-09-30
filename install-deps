@@ -1,5 +1,21 @@
 #!/bin/bash
 
+# setup virtualenv and python depts
+envd="venv"
+if [ -d './venv' ]
+then
+    rm -rf ./venv
+fi
+if [ -d './env' ]
+then
+    rm -rf ./env
+    envd="env"
+fi
+
+virtualenv $envd -p python3
+source ./$envd/bin/activate
+pip install -r requirements.txt
+
 # cleanup
 if [ -d './build' ]
 then
@@ -71,7 +87,6 @@ fi
 mkdir ./klee/build
 
 cd ./klee/build
-#export CXXFLAGS='-D_GLIBCXX_USE_CXX11_ABI=0'
 if [[ $machine -eq 0 ]]
 then
     cmake \
@@ -108,22 +123,6 @@ fi
 
 make
 cd ../..
-
-# setup virtualenv and python depts
-envd="venv"
-if [ -d './venv' ]
-then
-    rm -rf ./venv
-fi
-if [ -d './env' ]
-then
-    rm -rf ./env
-    envd="env"
-fi
-
-virtualenv $envd -p python3
-source ./$envd/bin/activate
-pip install -r requirements.txt
 
 # cvc5 and python bindings
 cd ./cvc5
