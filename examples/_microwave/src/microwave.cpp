@@ -12,11 +12,14 @@
 
 uint8_t decide( bool *started, bool start, bool close, bool heat, bool error ) {
 
-  // always close the door if it's open, either to fix error or after getting food
-  if ( !close ) { return closeDoor; }
+  // always close the door if it's open and the heat is on
+  if ( !close && heat ) { return closeDoor; }
 
-  // otherwise, on error push the cancel button
+  // otherwise try to solve the error by pushing cancel
   if (  error ) { return pushCancel; }
+
+  // otherwise, if open then close the door after getting food
+  if ( !close ) { return closeDoor; }
 
   // if no error, it's closed, and it's running, just wait
   if (  start ) { return doNothing; }

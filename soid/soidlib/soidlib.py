@@ -246,7 +246,7 @@ def Not( *args ):
 
 class Soid():
 
-    def __init__( self, query_name, query_type, priority = float( 'inf' ), skip = False ):
+    def __init__( self, query_name, query_type, priority = float( 'inf' ), expect = True, skip = False ):
 
         self.query_name = query_name
         self.query_type = query_type
@@ -254,6 +254,7 @@ class Soid():
 
         self.priority = priority
         self.skip     = skip
+        self.expect   = expect
 
         self.__regmap = {
             'descriptor'    : self.__reg_desc,

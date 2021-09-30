@@ -157,6 +157,8 @@ class Oracle():
         query._Soid__declare()
         self.description = query._Soid__descriptor()
 
+        self.expect = query.expect
+
         self.ld_env( query )
         self.ld_st( query )
         self.ld_bhv( query )
@@ -642,7 +644,10 @@ class Oracle():
 
             if len( expr.children() ) == 3:
                 if z3.is_K( expr.children()[ 0 ] ) and isinstance( expr.children()[ 2 ], z3.BitVecNumRef ):
-                    return expr.children()[ 2 ].as_long()
+                    if expr.children()[ 1 ].as_long() == 0:               # overwrite
+                        return ( expr.children()[ 2 ].as_long() )
+                    else:                                                 # extend
+                        return ( expr.children()[ 2 ].as_long() << tier ) + self.model_recurse( expr.children()[ 0 ], tier - 1 )
 
                 elif z3.is_store( expr.children()[ 0 ] ) and isinstance( expr.children()[ 2 ], z3.BitVecNumRef ):
                     return ( expr.children()[ 2 ].as_long() << tier ) + self.model_recurse( expr.children()[ 0 ], tier - 1 )
@@ -708,8 +713,11 @@ class Oracle():
 
 
     def verif_pp( self, unsat, model = None ):
-        mark  = chr(int('2713', 16)) if unsat else chr(int('2717', 16))
-        color = Fore.GREEN if unsat else Fore.RED
+        ex = soidlib.symbols.true if self.expect else soidlib.symbols.false
+        eq = ( unsat == self.expect )
+
+        mark  = chr( int( '2713', 16 ) ) if eq else chr( int( '2717', 16 ) )
+        color = Fore.GREEN if eq else Fore.RED
 
         print(
             f'\n\t                                                                                                              '
@@ -717,7 +725,7 @@ class Oracle():
         )
         print( self.description )
         print(
-            f'\n\t                result: [{color}{mark}{Style.RESET_ALL}]                                                      '
+            f'\n\t                expect: {ex}  |  result: [{color}{mark}{Style.RESET_ALL}]                                     '
             f'\n\t                                                                                                              '
             f'\n\tconstraints:                                                                                                  '
             f'\n\t                                                                                                              '
@@ -731,6 +739,42 @@ class Oracle():
             print(
                 f'\n\t                                                                                                          '
                 f'\n\tcounterexample:                                                                                           '
+                f'\n\t                                                                                                          '
+            )
+            self.model_pp( model )
+
+        print(
+            f'\n\t                                                                                                              '
+        )
+
+
+    def scf_pp( self, unsat, model = None ):
+        ex = soidlib.symbols.true if self.expect else soidlib.symbols.false
+        eq = ( not unsat == self.expect )
+
+        mark  = chr( int( '2713', 16 ) ) if eq else chr( int( '2717', 16 ) )
+        color = Fore.GREEN if eq else Fore.RED
+
+        print(
+            f'\n\t                                                                                                              '
+            f'\n\t{str(self.ct).zfill(7)}.  |  name: {self.name}  |  type: counterfactual.single                                '
+        )
+        print( self.description )
+        print(
+            f'\n\t                expect: {ex}  |  result: [{color}{mark}{Style.RESET_ALL}]                                     '
+            f'\n\t                                                                                                              '
+            f'\n\tconstraints:                                                                                                  '
+            f'\n\t                                                                                                              '
+        )
+
+        self.query_pp( 'phi',  self.phi() )
+        self.query_pp( 'vphi', self.vphi() )
+        self.query_pp( 'beta', self.beta() )
+
+        if not unsat and model:
+            print(
+                f'\n\t                                                                                                          '
+                f'\n\tcounterfactual                                                                                            '
                 f'\n\t                                                                                                          '
             )
             self.model_pp( model )
@@ -770,12 +814,14 @@ class Oracle():
 
         unsat = ( self.solver.check() == z3.unsat )
         if unsat:
-            pass
+            return self.scf_pp( unsat )
 
         model = self.solver.model()
 
         for var in list( self.E ) + list( self.S ) + list( self.P ):
             model.eval( var, model_completion = True )
+
+        return self.scf_pp( unsat )
 
 
     def ncf( self ):
