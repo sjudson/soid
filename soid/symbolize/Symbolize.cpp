@@ -25,33 +25,37 @@ using namespace llvm;
 struct Location {
   int _scc;
 
-  Function *F;
-  BasicBlock *BB;
-  Instruction *I;
+  Function     *F;
+  BasicBlock   *BB;
+  Instruction  *I;
   DILocalScope *S;
 };
 
+struct Var {
+  Location        *loc;
+  DILocalVariable *dbg;
+  Value           *decl;
+};
 
 struct Configuration {
-  bool allow;                   // whether program variables are provided as allowlist or denylist
-  std::string QueryFile;        // location of query IR
+  bool allow;                // whether program variables are provided as allowlist or denylist
+  std::string QueryFile;     // location of query IR
 
-  std::set<std::string> E; // environmental variables
-  std::set<std::string> S; // (input) state variables
-  std::set<std::string> P; // program variables
-  std::set<std::string> I; // all input variables
-  std::set<std::string> V; // all variables
+  std::set<std::string> E;   // environmental variables
+  std::set<std::string> S;   // (input) state variables
+  std::set<std::string> P;   // program variables
+  std::set<std::string> I;   // all input variables
+  std::set<std::string> V;   // all variables
 };
 bool isin_vars( std::string s, std::set<std::string> ss ) { return ss.find( s ) != ss.end(); }
 
 
 struct Context {
   std::map<std::string, GlobalVariable*> renamed;
-  std::map<std::string, Location*> ilocs;
-  std::map<std::string, Location*> plocs;
-
+  std::map<std::string, Var*> is;
+  std::map<std::string, Var*> ps;
 };
-bool isin_locs( std::string s, std::map<std::string, Location*> ms ) { return ms.find( s ) != ms.end(); }
+bool is_found( std::string s, std::map<std::string, Var*> ms ) { return ms.find( s ) != ms.end(); }
 
 
 struct Symbolize : PassInfoMixin<Symbolize> {
@@ -69,9 +73,16 @@ struct Symbolize : PassInfoMixin<Symbolize> {
   void parseConfig();
   void parseError( int eno );
   void loadQuery( LLVMContext &Ctx );
-  void transferGlobals( Module &M, Context *Ctx );
+
+  DbgDeclareInst* extractDeclare( Instruction &I );
+  //DbgValueInst* extractValue( Instruction &I );
+  DILocalVariable* extractDebug( Instruction &I );
+
   void findVariables( Module &M, Context *Ctx );
+
+  void transferGlobals( Module &M, Context *Ctx );
   void transferSymbolics( Module &M, Context *Ctx );
+
   void symbolizeProgram( Module &M, Context *Ctx );
   PreservedAnalyses run( Module &M, ModuleAnalysisManager &MAM );
 };
@@ -199,14 +210,51 @@ void Symbolize::transferGlobals( Module &M, Context *Ctx ) {
   return;
 }
 
+DbgDeclareInst* Symbolize::extractDeclare( Instruction &I ) {
+  if ( DbgDeclareInst *dbgDec = dyn_cast<DbgDeclareInst>( &I ) ) return dbgDec;
+  return nullptr;
+}
+
+//DbgValueInst* Symbolize::extractValue( Instruction &I ) {
+//  return ( DbgValueInst *dbgVal = dyn_cast<DbgValueInst>( &I ) ) ? dbgVal : nullptr;
+//}
+
+DILocalVariable* Symbolize::extractDebug( Instruction &I ) {
+  // which of these exists depends on optimization level, at the moment we assume declare
+  if ( DbgDeclareInst *dbgDec = extractDeclare( I ) ) return dbgDec->getVariable();
+  //if ( DbgValueInst   *dbgVal = extractValue( I ) )   return dbgVal->getVariable();
+
+  return nullptr;
+}
 
 void Symbolize::findVariables( Module &M, Context *Ctx ) {
 
+  Function *F;
   CallGraph cg = CallGraph( M );
 
-  int si = 0;
+  DILocalVariable *dbgVar;
 
-  Function *F;
+  std::string stream, name, ename;
+  raw_string_ostream osn( stream );
+
+  // this iterator goes in post order, which is the opposite direction to which we need, and
+  // unforunately it isn't bidirectional, so we cannot just reverse it using the builtin C++
+  // tooling to do that
+  //
+  // at first glance this seems not be a problem, as we just "evict" definitions named as an
+  // input variable as we go back up the call graph
+  //
+  // however, we need to error if we cannot distinguish the first declaration of the variable,
+  // which will happen if its first (i.e., in the iterator, last) appearance is in a SCC where
+  // the same name has already appeared
+  //
+  // so we keep a map to the two most recent SCCs where we've seen the name, and at the end can
+  // error if the same value is in both slots
+  //
+  // nb: there are cases that aren't ambiguous we fail on with this, should be made more precise
+  std::map<std::string, std::pair<int, int>> last_seen;
+
+  int si = 0;
   for ( scc_iterator<CallGraph*> vs = scc_begin( &cg ), vse = scc_end( &cg ); vs != vse; ++vs ) {
     const std::vector<CallGraphNode*> &ns = *vs;
 
@@ -215,73 +263,60 @@ void Symbolize::findVariables( Module &M, Context *Ctx ) {
 
       if ( !F ) continue; // todo: explore why this is necessary
 
-      DbgDeclareInst  *dbgDec;
-      DbgValueInst    *dbgVal;
-      DILocalVariable *dbgVar;
-
-      StringRef name;
-      std::string sname;
-
       for ( BasicBlock &BB : *F ) {
         for ( Instruction &I : BB ) {
 
-          dbgVar = nullptr;
-
-          // which of these exists depends on optimization level
-          if ( dbgDec = dyn_cast<DbgDeclareInst>( &I ) ) dbgVar = dbgDec->getVariable();
-          if ( dbgVal = dyn_cast<DbgValueInst>( &I ) )   dbgVar = dbgVal->getVariable();
+          dbgVar = Symbolize::extractDebug( I );
           if ( !dbgVar ) continue;
 
-          name = dbgVar->getName();
+          stream.clear(); osn << dbgVar->getName().str(); osn.flush();
+          name.clear(); name = osn.str();
 
-          // handle input vars
-          if ( isin_vars( name, Symbolize::Config.I ) ) {
-            // if we already know of a location by the same name in the same SCC, error to prevent issues resolving loops
-            // nb: there are cases that aren't ambiguous we fail on with this, we should make it more precise if possible
-            if ( isin_locs( name, Ctx->ilocs ) && Ctx->ilocs[ name ]->_scc == si ) {
-              errs() << "\nCannot resolve first declaration of " << name << ", ambiguous input to symbolize.\n\n";
-              exit( 1 );
-            }
+          last_seen[ name ] = ( last_seen.find( name ) != last_seen.end() )
+            ? std::pair<int, int>( si, -1 )
+            : std::pair<int, int>( si, last_seen[ name ].first );
 
-            Ctx->ilocs[ name ] = new Location();
-            Ctx->ilocs[ name ]->_scc = si;
+          bool in_I = isin_vars( name, Symbolize::Config.I );
+          bool in_P = isin_vars( name, Symbolize::Config.P );
+          if ( in_I || ( Symbolize::Config.allow && in_P ) || ( !Symbolize::Config.allow && !in_P ) ) {
 
-            Ctx->ilocs[ name ]->F  = F;
-            Ctx->ilocs[ name ]->BB = &BB;
-            Ctx->ilocs[ name ]->I  = &I;
-            Ctx->ilocs[ name ]->S  = dbgVar->getScope();
-          }
+            stream.clear(); osn << name << "." << si << "." << dbgVar->getScope()->getName() << "\n"; osn.flush();
+            ename.clear(); ename = osn.str();
 
-          // handle program vars
-          int mark = 0;
-          bool in_vars = isin_vars( name, Symbolize::Config.P );
-          if ( ( Symbolize::Config.allow && in_vars ) || ( !Symbolize::Config.allow && !in_vars ) ) {
+            Ctx->ps[ ename ] = new Var();
 
-            while ( true ) {
-              sname = name.str() + std::to_string( mark );
-              if ( isin_locs( sname, Ctx->plocs ) ) { mark++; continue; }
+            Ctx->ps[ ename ]->dbg  = dbgVar;
+            Ctx->ps[ ename ]->decl = dyn_cast<Value>( &I );
 
-              Ctx->plocs[ sname ] = new Location();
-              Ctx->plocs[ sname ]->_scc = -1;
+            Ctx->ps[ ename ]->loc = new Location();
+            Ctx->ps[ ename ]->loc->_scc = si;
 
-              Ctx->plocs[ sname ]->F  = F;
-              Ctx->plocs[ sname ]->BB = &BB;
-              Ctx->plocs[ sname ]->I  = &I;
-              Ctx->plocs[ sname ]->S  = dbgVar->getScope();
-              break;
-            }
+            Ctx->ps[ ename ]->loc->F  = F;
+            Ctx->ps[ ename ]->loc->BB = &BB;
+            Ctx->ps[ ename ]->loc->I  = &I;
+            Ctx->ps[ ename ]->loc->S  = dbgVar->getScope();
+
+            if ( isin_vars( name, Symbolize::Config.I ) ) Ctx->is[ name ] = Ctx->ps[ ename ];
           }
         }
       }
     }
     si++;
   }
+
+  // if we already know of a location by the same name in the same SCC, error to prevent issues resolving loops
+  for ( auto const& ls : last_seen ) {
+    if ( ls.second.first != ls.second.second ) continue;
+    errs() << "\nCannot resolve first declaration of " << ls.first << ", ambiguous input to symbolize.\n\n";
+    exit( 1 );
+  }
 }
+
 
 
 void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
 
-  StringRef name;
+  StringRef fname;
   bool make;
 
   CallInst *CI;
@@ -304,30 +339,61 @@ void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
   _klee_assume = M.getOrInsertFunction( "klee_assume", __klee_assume->getFunctionType(), __klee_assume->getAttributes() );
   klee_assume  = cast<Function>( _klee_assume.getCallee() );
 
-  errs() << "\n\n\n";
+  DbgDeclareInst  *dbgDec;
+  DILocalVariable *dbgVar;
+  AllocaInst *alloca;
+
+  std::map<Value*, std::string> nmap;
+  std::string stream, name;
+  raw_string_ostream osn( stream );
+
+  Value *vop, *nvop, *nvptr;
 
   for ( Function &F : *Symbolize::Query ) {
     for ( BasicBlock &BB : F ) {
       for ( Instruction &I : BB ) {
+        if ( dbgDec = Symbolize::extractDeclare( I ) ) {
+
+          alloca = dyn_cast<AllocaInst>( dbgDec->getAddress() ); // todo: handle error case
+
+          dbgVar = Symbolize::extractDebug( I );
+          stream.clear(); osn << dbgVar->getName().str(); osn.flush();
+          name.clear(); name = osn.str();
+
+          nmap[ dyn_cast<Value>( alloca ) ] = name;
+
+          continue;
+        }
+
         if ( !( CI = dyn_cast<CallInst>( &I ) ) ) continue;
 
         Function *called = CI->getCalledFunction();
         if ( !called ) continue; // todo: explore why this is necessary
-        name = called->getName();
+        fname = called->getName();
 
-        if ( ( make = ( name != "klee_assume" ) ) && name != "klee_make_symbolic" ) continue;
+        if ( ( make = ( fname != "klee_assume" ) ) && fname != "klee_make_symbolic" ) continue;
 
         if ( make ) {
 
-          IRBuilder<> Builder( &I );
+          // TODO: FIGURE OUT HOW TO GET FROM
+          // OPERAND -> METADATA -> NAME so that we can look it up
+          //
+          // I do need a instruction -> metadata map from the dbg declare I think...
+
+          for ( auto const& x : nmap ) errs() << x.first << "|" << x.second << "\n";
 
           // map variable
-          Value *nvop, *vop = I.getOperand( 0 );
-          nvop = ( isin_locs( "foo", Ctx->ilocs ) )
-            ? cast<Value>( Ctx->ilocs[ "foo" ]->I )
-            : cast<Value>( Ctx->plocs[ "foo" ]->I );
+          vop = I.getOperand( 0 );
 
-          Value *nvptr = Builder.CreateIntToPtr( nvop, vop->getType(), nvop->getName() + "_ptr" );
+          if ( namp.find( vop ) == nmap.end() ); // HANDLE ERROR CASE
+          name.clear(); name = nmap[ vop ];
+
+          if ( !is_found( name, Ctx->is ) );     // HANDLE ERROR CASE
+
+          IRBuilder<> Builder( Ctx->is[ name ]->loc->I );
+
+          nvop  = cast<Value>( Ctx->is[ name ]->loc->I );
+          nvptr = Builder.CreateIntToPtr( nvop, vop->getType(), nvop->getName() + "_ptr" );
 
           // map size
           Value *nsop, *sop = I.getOperand( 1 );
@@ -355,8 +421,8 @@ PreservedAnalyses Symbolize::run( Module &M, ModuleAnalysisManager &MAM ) {
 
   Context Ctx;
 
-  Symbolize::transferGlobals( M, &Ctx );
-  Symbolize::findVariables( M, &Ctx );
+  Symbolize::transferGlobals( M, &Ctx );     // transfer globals (e.g., symbolic names) from query to program
+  Symbolize::findVariables( M, &Ctx );       // search program to find all program variable names + locations
   Symbolize::transferSymbolics( M, &Ctx );
 
   return PreservedAnalyses::none();
