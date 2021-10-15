@@ -375,13 +375,6 @@ void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
 
         if ( make ) {
 
-          // TODO: FIGURE OUT HOW TO GET FROM
-          // OPERAND -> METADATA -> NAME so that we can look it up
-          //
-          // I do need a instruction -> metadata map from the dbg declare I think...
-
-          for ( auto const& x : nmap ) errs() << x.first << "|" << x.second << "\n";
-
           // map variable
           vop = I.getOperand( 0 );
 
