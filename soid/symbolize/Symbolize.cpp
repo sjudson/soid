@@ -296,7 +296,7 @@ void Symbolize::findVariables( Module &M, Context *Ctx ) {
             Ctx->ps[ ename ]->loc->I  = &I;
             Ctx->ps[ ename ]->loc->S  = dbgVar->getScope();
 
-            if ( isin_vars( name, Symbolize::Config.I ) ) Ctx->is[ name ] = Ctx->ps[ ename ];
+            if ( in_I ) Ctx->is[ name ] = Ctx->ps[ ename ];
           }
         }
       }
