@@ -1,6 +1,7 @@
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/LLVMContext.h"
@@ -23,18 +24,19 @@ using namespace llvm;
 
 
 struct Location {
-  int _scc;
+  int           SCC;  // SCC within program of instruction Location, in post-order
+  DILocalScope *S;    // debugging scope
 
-  Function     *F;
-  BasicBlock   *BB;
-  Instruction  *I;
-  DILocalScope *S;
+  Function     *F;    // enclosing function
+  BasicBlock   *BB;   // enclosing basic block
+  Instruction  *I;    // the instruction itself
 };
 
 struct Var {
-  Location        *loc;
-  DILocalVariable *dbg;
-  Value           *decl;
+  Location        *loc;  // variable declaration location
+  DbgDeclareInst  *dbg;  // variable debugging instruction, points at true location of variable ( ->getAddress() )
+  DILocalVariable *dlv;  // variable debugging metadata
+  Value           *decl; // the instruction within Location cast to Value for easy access 
 };
 
 struct Configuration {
@@ -47,14 +49,26 @@ struct Configuration {
   std::set<std::string> I;   // all input variables
   std::set<std::string> V;   // all variables
 };
+
+/***
+ * isin_vars
+ *
+ * quick helper function to see if variable name is already known
+ */
 bool isin_vars( std::string s, std::set<std::string> ss ) { return ss.find( s ) != ss.end(); }
 
 
 struct Context {
-  std::map<std::string, GlobalVariable*> renamed;
-  std::map<std::string, Var*> is;
-  std::map<std::string, Var*> ps;
+  std::map<std::string, GlobalVariable*> renamed;  // map query global variables "names" ( @.str.XXX ) to program global variable names ( see: transferGlobals )
+  std::map<std::string, Var*> is;                  // point input variable names to var objects ( for program, not query )
+  std::map<std::string, Var*> ps;                  // point program variable names to var objects ( for program, not query )
 };
+
+/***
+ * is_found
+ *
+ * quick lookup to see whether a var exists for a variable
+ */
 bool is_found( std::string s, std::map<std::string, Var*> ms ) { return ms.find( s ) != ms.end(); }
 
 
@@ -88,6 +102,11 @@ struct Symbolize : PassInfoMixin<Symbolize> {
 };
 
 
+/***
+ * parseError
+ *
+ * error lookup for toml file parsing
+ */
 void Symbolize::parseError( int eno ) {
 
   errs() << "\nInvalid configuration file.\n\t";
@@ -127,6 +146,11 @@ void Symbolize::parseError( int eno ) {
 }
 
 
+/***
+ * parseConfig
+ *
+ * parse auto or handwritten toml configuration files
+ */
 void Symbolize::parseConfig() {
 
   toml::table tbl;
@@ -174,9 +198,19 @@ void Symbolize::parseConfig() {
 }
 
 
+/***
+ * loadQuery
+ * 
+ * parse and load query LLVM IR file
+ */
 void Symbolize::loadQuery( LLVMContext &Ctx ) { Symbolize::Query = parseIRFile( Symbolize::Config.QueryFile, Symbolize::Err, Ctx ); }
 
 
+/***
+ * transferGlobals
+ *
+ * transfer global strings from query (e.g., names of symbolic variables) into the program
+ */
 void Symbolize::transferGlobals( Module &M, Context *Ctx ) {
 
   std::string name;
@@ -210,28 +244,53 @@ void Symbolize::transferGlobals( Module &M, Context *Ctx ) {
   return;
 }
 
+/***
+ * extractDeclare
+ *
+ * cast declaration instruction to that type
+ */
 DbgDeclareInst* Symbolize::extractDeclare( Instruction &I ) {
   if ( DbgDeclareInst *dbgDec = dyn_cast<DbgDeclareInst>( &I ) ) return dbgDec;
   return nullptr;
 }
 
+/***
+ * extractValue
+ *
+ * cast Value instruction to that type
+ * 
+ * not used at present since this only appears in LLVM at high optimization levels,
+ * but this will apparently become the standard way of doing it over declarations
+ */
 //DbgValueInst* Symbolize::extractValue( Instruction &I ) {
 //  return ( DbgValueInst *dbgVal = dyn_cast<DbgValueInst>( &I ) ) ? dbgVal : nullptr;
 //}
 
+
+/***
+ * extractDebug
+ * 
+ * get debug metadata for an instruction
+ */
 DILocalVariable* Symbolize::extractDebug( Instruction &I ) {
   // which of these exists depends on optimization level, at the moment we assume declare
   if ( DbgDeclareInst *dbgDec = extractDeclare( I ) ) return dbgDec->getVariable();
-  //if ( DbgValueInst   *dbgVal = extractValue( I ) )   return dbgVal->getVariable();
+  //if ( DbgValueInst *dbgVal = extractValue( I ) )   return dbgVal->getVariable();
 
   return nullptr;
 }
 
+/***
+ * findVariables
+ *
+ * find locations of variables in query
+ */
 void Symbolize::findVariables( Module &M, Context *Ctx ) {
 
   Function *F;
   CallGraph cg = CallGraph( M );
 
+  DbgDeclareInst  *dbgDec;
   DILocalVariable *dbgVar;
 
   std::string stream, name, ename;
@@ -266,6 +325,7 @@ void Symbolize::findVariables( Module &M, Context *Ctx ) {
       for ( BasicBlock &BB : *F ) {
         for ( Instruction &I : BB ) {
 
+          dbgDec = Symbolize::extractDeclare( I );
           dbgVar = Symbolize::extractDebug( I );
           if ( !dbgVar ) continue;
 
@@ -285,11 +345,12 @@ void Symbolize::findVariables( Module &M, Context *Ctx ) {
 
             Ctx->ps[ ename ] = new Var();
 
-            Ctx->ps[ ename ]->dbg  = dbgVar;
+            Ctx->ps[ ename ]->dbg  = dbgDec;
+            Ctx->ps[ ename ]->dlv  = dbgVar;
             Ctx->ps[ ename ]->decl = dyn_cast<Value>( &I );
 
             Ctx->ps[ ename ]->loc = new Location();
-            Ctx->ps[ ename ]->loc->_scc = si;
+            Ctx->ps[ ename ]->loc->SCC = si;
 
             Ctx->ps[ ename ]->loc->F  = F;
             Ctx->ps[ ename ]->loc->BB = &BB;
@@ -313,7 +374,11 @@ void Symbolize::findVariables( Module &M, Context *Ctx ) {
 }
 
 
-
+/***
+ * transferSymbolics
+ *
+ * transfer symbolic declarations from query into program
+ */
 void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
 
   StringRef fname;
@@ -341,13 +406,11 @@ void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
 
   DbgDeclareInst  *dbgDec;
   DILocalVariable *dbgVar;
-  AllocaInst *alloca;
+  AllocaInst      *alloca;
 
   std::map<Value*, std::string> nmap;
   std::string stream, name;
   raw_string_ostream osn( stream );
-
-  Value *vop, *nvop, *nvptr;
 
   for ( Function &F : *Symbolize::Query ) {
     for ( BasicBlock &BB : F ) {
@@ -364,7 +427,6 @@ void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
 
           continue;
         }
-
         if ( !( CI = dyn_cast<CallInst>( &I ) ) ) continue;
 
         Function *called = CI->getCalledFunction();
@@ -376,17 +438,16 @@ void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
         if ( make ) {
 
           // map variable
-          vop = I.getOperand( 0 );
+          Value *nvop, *vop = I.getOperand( 0 );
+          if ( nmap.find( vop ) == nmap.end() ); // todo: handle error case
 
-          if ( namp.find( vop ) == nmap.end() ); // HANDLE ERROR CASE
           name.clear(); name = nmap[ vop ];
-
-          if ( !is_found( name, Ctx->is ) );     // HANDLE ERROR CASE
+          if ( !is_found( name, Ctx->is ) );     // todo: handle error case
 
           IRBuilder<> Builder( Ctx->is[ name ]->loc->I );
 
-          nvop  = cast<Value>( Ctx->is[ name ]->loc->I );
-          nvptr = Builder.CreateIntToPtr( nvop, vop->getType(), nvop->getName() + "_ptr" );
+          alloca = dyn_cast<AllocaInst>( Ctx->is[ name ]->dbg->getAddress() ); // todo: handle error case
+          nvop   = cast<Value>( alloca );
 
           // map size
           Value *nsop, *sop = I.getOperand( 1 );
@@ -395,12 +456,25 @@ void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
 
           // map name
           // todo: handle case where name isn't a global variable
-          Value *nnop, *nop = cast<GEPOperator>( I.getOperand( 2 ) )->getPointerOperand();
-          GlobalVariable *nref = Ctx->renamed[ nop->getName() ];
-          nnop = cast<Value>( nref );
+          GEPOperator *gepop = dyn_cast<GEPOperator>( I.getOperand( 2 ) ); // todo: handle error case
 
-          Builder.CreateCall( _klee_make_symbolic, { nvptr, nsop, nnop } );
+          Value *nop = gepop->getPointerOperand();
+          GlobalVariable *nref = Ctx->renamed[ nop->getName() ];
+
+          // todo: it would be nice to build these by inspecting gepop to make sure we have the right inputs but llvm9
+          //       makes that tedious, so for now let's assume this works (it probably does w/ our global assumption)
+          Constant *idxs[ 2 ] = { ConstantInt::get( M.getContext(), APInt( 64, 0 ) ),
+                                  ConstantInt::get( M.getContext(), APInt( 64, 0 ) ) };
+
+          Constant *ngepop = ConstantExpr::getInBoundsGetElementPtr( nref->getValueType(), nref, idxs );
+
+          Builder.CreateCall( _klee_make_symbolic, { nvop, nsop, ngepop } );
         } else {
+
+
+
+
+
         }
       }
     }
