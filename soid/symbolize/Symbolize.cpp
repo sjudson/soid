@@ -417,6 +417,7 @@ void Symbolize::symbolizeVar( Module &M, Context *Ctx, Instruction &I, std::map<
   AllocaInst *alloca;  // variable allocation instruction ( op 0 )
   ConstantInt *cint;   // size input ( op 1 )
   GEPOperator *gep;    // original gep from query
+  Instruction *loc;    // location to put the instruction in the program
   GlobalVariable *gv;  // global string ngep points to
 
   // 1. we find the variable in the program
@@ -424,11 +425,11 @@ void Symbolize::symbolizeVar( Module &M, Context *Ctx, Instruction &I, std::map<
   if ( nmap.find( op ) == nmap.end() ); // todo: handle error case
 
   name.clear(); name = nmap[ op ];
-  if ( name.empty() ) return;           // todo: explore why this is necessary
-  if ( !is_found( name, Ctx->is ) );    // todo: handle error case
 
   // 2. next we use it to find where to put the new instruction
-  IRBuilder<> Builder( Ctx->is[ name ]->loc->I );
+  if ( !is_found( name, Ctx->is ) );    // todo: handle error case
+
+  IRBuilder<> Builder( Ctx->is[ name ]->loc->I->getNextNonDebugInstruction() );
 
   // 3. then we find variable location itself
   alloca = dyn_cast<AllocaInst>( Ctx->is[ name ]->dbg->getAddress() ); // todo: handle error case
@@ -490,6 +491,9 @@ void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
   std::string stream, name;
   raw_string_ostream osn( stream );
 
+  std::vector<std::reference_wrapper<Instruction>> sis;
+  std::vector<std::reference_wrapper<Instruction>> ais;
+
   for ( Function &F : *Symbolize::Query ) {
     for ( BasicBlock &BB : F ) {
       for ( Instruction &I : BB ) {
@@ -513,11 +517,17 @@ void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
 
         if ( ( assume = ( fname != "klee_make_symbolic" ) ) && ( fname != "klee_assume" ) ) continue;
 
-        if ( assume ) { traverseInst( M, Ctx, I, nmap, klee_assume ); }
-        symbolizeVar( M, Ctx, I, nmap, klee_make_symbolic );
+        ( assume )
+          ? ais.push_back( I )
+          : sis.push_back( I );
       }
     }
   }
+  for ( std::vector<std::reference_wrapper<Instruction>>::reverse_iterator ai = ais.rbegin(); ai != ais.rend(); ++ai )
+    traverseInst( M, Ctx, *ai, nmap, klee_assume );
+
+  for ( std::vector<std::reference_wrapper<Instruction>>::reverse_iterator si = sis.rbegin(); si != sis.rend(); ++si )
+    symbolizeVar( M, Ctx, *si, nmap, klee_make_symbolic );
 }
 
 
