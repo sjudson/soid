@@ -36,7 +36,7 @@ struct Var {
   Location        *loc;  // variable declaration location
   DbgDeclareInst  *dbg;  // variable debugging instruction, points at true location of variable ( ->getAddress() )
   DILocalVariable *dlv;  // variable debugging metadata
-  Value           *decl; // the instruction within Location cast to Value for easy access 
+  Value           *decl; // the instruction within Location cast to Value for easy access
 };
 
 struct Configuration {
@@ -93,6 +93,10 @@ struct Symbolize : PassInfoMixin<Symbolize> {
   DILocalVariable* extractDebug( Instruction &I );
 
   void findVariables( Module &M, Context *Ctx );
+
+  void traverseOp( Module &M, Context *Ctx, Value *op, std::map<Value*, std::string>& nmap, FunctionCallee &ka );
+  void traverseInst( Module &M, Context *Ctx, Instruction &I, std::map<Value*, std::string>& nmap, FunctionCallee &ka );
+  void symbolizeVar( Module &M, Context *Ctx, Instruction &I, std::map<Value*, std::string>& nmap, FunctionCallee &kms );
 
   void transferGlobals( Module &M, Context *Ctx );
   void transferSymbolics( Module &M, Context *Ctx );
@@ -200,7 +204,7 @@ void Symbolize::parseConfig() {
 
 /***
  * loadQuery
- * 
+ *
  * parse and load query LLVM IR file
  */
 void Symbolize::loadQuery( LLVMContext &Ctx ) { Symbolize::Query = parseIRFile( Symbolize::Config.QueryFile, Symbolize::Err, Ctx ); }
@@ -258,7 +262,7 @@ DbgDeclareInst* Symbolize::extractDeclare( Instruction &I ) {
  * extractValue
  *
  * cast Value instruction to that type
- * 
+ *
  * not used at present since this only appears in LLVM at high optimization levels,
  * but this will apparently become the standard way of doing it over declarations
  */
@@ -269,7 +273,7 @@ DbgDeclareInst* Symbolize::extractDeclare( Instruction &I ) {
 
 /***
  * extractDebug
- * 
+ *
  * get debug metadata for an instruction
  */
 DILocalVariable* Symbolize::extractDebug( Instruction &I ) {
@@ -313,6 +317,8 @@ void Symbolize::findVariables( Module &M, Context *Ctx ) {
   // nb: there are cases that aren't ambiguous we fail on with this, should be made more precise
   std::map<std::string, std::pair<int, int>> last_seen;
 
+  bool in_I, in_P;
+
   int si = 0;
   for ( scc_iterator<CallGraph*> vs = scc_begin( &cg ), vse = scc_end( &cg ); vs != vse; ++vs ) {
     const std::vector<CallGraphNode*> &ns = *vs;
@@ -336,8 +342,8 @@ void Symbolize::findVariables( Module &M, Context *Ctx ) {
             ? std::pair<int, int>( si, -1 )
             : std::pair<int, int>( si, last_seen[ name ].first );
 
-          bool in_I = isin_vars( name, Symbolize::Config.I );
-          bool in_P = isin_vars( name, Symbolize::Config.P );
+          in_I = isin_vars( name, Symbolize::Config.I );
+          in_P = isin_vars( name, Symbolize::Config.P );
           if ( in_I || ( Symbolize::Config.allow && in_P ) || ( !Symbolize::Config.allow && !in_P ) ) {
 
             stream.clear(); osn << name << "." << si << "." << dbgVar->getScope()->getName() << "\n"; osn.flush();
@@ -375,6 +381,80 @@ void Symbolize::findVariables( Module &M, Context *Ctx ) {
 
 
 /***
+ * traverseOperands
+ *
+ * process operands in instruction tree ( for klee_assume )
+ */
+void Symbolize::traverseOp( Module &M, Context *Ctx, Value *op, std::map<Value*, std::string>& nmap, FunctionCallee &ka ) {
+
+
+
+}
+
+
+/***
+ * traverseInstructions
+ *
+ * process instructions in tree ( for klee_assume )
+ */
+void Symbolize::traverseInst( Module &M, Context *Ctx, Instruction &I, std::map<Value*, std::string>& nmap, FunctionCallee &ka ) {
+
+
+}
+
+
+/***
+ * symbolizeVar
+ *
+ * make variable symbolic ( for klee_make_symbolic )
+ */
+void Symbolize::symbolizeVar( Module &M, Context *Ctx, Instruction &I, std::map<Value*, std::string>& nmap, FunctionCallee &kms ) {
+
+  std::string name;    // variable name
+  Value *op;           // current query operand
+  Constant *idxs[ 2 ]; // indices into global string for gep
+  Constant *ngep;      // gep function input ( op 2 )
+  AllocaInst *alloca;  // variable allocation instruction ( op 0 )
+  ConstantInt *cint;   // size input ( op 1 )
+  GEPOperator *gep;    // original gep from query
+  GlobalVariable *gv;  // global string ngep points to
+
+  // 1. we find the variable in the program
+  op = I.getOperand( 0 );
+  if ( nmap.find( op ) == nmap.end() ); // todo: handle error case
+
+  name.clear(); name = nmap[ op ];
+  if ( name.empty() ) return;           // todo: explore why this is necessary
+  if ( !is_found( name, Ctx->is ) );    // todo: handle error case
+
+  // 2. next we use it to find where to put the new instruction
+  IRBuilder<> Builder( Ctx->is[ name ]->loc->I );
+
+  // 3. then we find variable location itself
+  alloca = dyn_cast<AllocaInst>( Ctx->is[ name ]->dbg->getAddress() ); // todo: handle error case
+
+  // 4. we next build the size input within the programs context ( M )
+  cint = ConstantInt::get( M.getContext(), cast<ConstantInt>( I.getOperand( 1 ) )->getValue() );
+
+  // 5. and then we form a GEP to the global variable (potentally with its new name) in the program
+  // todo: handle case where name isn't a global variable
+  gep = dyn_cast<GEPOperator>( I.getOperand( 2 ) ); // todo: handle error case
+  gv  = Ctx->renamed[ gep->getPointerOperand()->getName() ];
+
+  // todo: it would be nice to build these by inspecting gepop to make sure we have the right inputs but llvm9
+  //       makes that tedious, so for now let's assume this works (it probably does w/ our global assumption)
+  idxs[ 0 ] = ConstantInt::get( M.getContext(), APInt( 64, 0 ) );
+  idxs[ 1 ] = ConstantInt::get( M.getContext(), APInt( 64, 0 ) );
+  ngep = ConstantExpr::getInBoundsGetElementPtr( gv->getValueType(), gv, idxs );
+
+  // 6. We make the call itself
+  Builder.CreateCall( kms, { cast<Value>( alloca ), cast<Value>( cint ), cast<Value>( ngep ) } );
+
+  return;
+}
+
+
+/***
  * transferSymbolics
  *
  * transfer symbolic declarations from query into program
@@ -382,27 +462,25 @@ void Symbolize::findVariables( Module &M, Context *Ctx ) {
 void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
 
   StringRef fname;
-  bool make;
+  bool assume;
 
   CallInst *CI;
+  Function *called;
 
-  Function *__klee_make_symbolic = Symbolize::Query->getFunction( "klee_make_symbolic" );
-  Function *__klee_assume        = Symbolize::Query->getFunction( "klee_assume" );
+  Function *_klee_make_symbolic = Symbolize::Query->getFunction( "klee_make_symbolic" );
+  Function *_klee_assume        = Symbolize::Query->getFunction( "klee_assume" );
 
-  if ( !__klee_make_symbolic ) {
+  if ( !_klee_make_symbolic ) {
     errs() << "Cannot find any symbolic variables in query file.\n\n";
     exit( 1 );
   }
 
-  FunctionCallee _klee_make_symbolic, _klee_assume;
-  Function *klee_make_symbolic, *klee_assume;
+  FunctionCallee klee_make_symbolic, klee_assume;
 
-  _klee_make_symbolic = M.getOrInsertFunction( "klee_make_symbolic", __klee_make_symbolic->getFunctionType(), __klee_make_symbolic->getAttributes() );
-  klee_make_symbolic  = cast<Function>( _klee_make_symbolic.getCallee() );
+  klee_make_symbolic = M.getOrInsertFunction( "klee_make_symbolic", _klee_make_symbolic->getFunctionType(), _klee_make_symbolic->getAttributes() );
 
   // todo: figure out if klee_assume may not exist (do we just e.g. force it with klee_assume( true ) in the header?)
-  _klee_assume = M.getOrInsertFunction( "klee_assume", __klee_assume->getFunctionType(), __klee_assume->getAttributes() );
-  klee_assume  = cast<Function>( _klee_assume.getCallee() );
+  klee_assume = M.getOrInsertFunction( "klee_assume", _klee_assume->getFunctionType(), _klee_assume->getAttributes() );
 
   DbgDeclareInst  *dbgDec;
   DILocalVariable *dbgVar;
@@ -429,53 +507,14 @@ void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
         }
         if ( !( CI = dyn_cast<CallInst>( &I ) ) ) continue;
 
-        Function *called = CI->getCalledFunction();
-        if ( !called ) continue; // todo: explore why this is necessary
+        called = CI->getCalledFunction();
+        if ( !called ) continue;  // todo: explore why this is necessary
         fname = called->getName();
 
-        if ( ( make = ( fname != "klee_assume" ) ) && fname != "klee_make_symbolic" ) continue;
+        if ( ( assume = ( fname != "klee_make_symbolic" ) ) && ( fname != "klee_assume" ) ) continue;
 
-        if ( make ) {
-
-          // map variable
-          Value *nvop, *vop = I.getOperand( 0 );
-          if ( nmap.find( vop ) == nmap.end() ); // todo: handle error case
-
-          name.clear(); name = nmap[ vop ];
-          if ( !is_found( name, Ctx->is ) );     // todo: handle error case
-
-          IRBuilder<> Builder( Ctx->is[ name ]->loc->I );
-
-          alloca = dyn_cast<AllocaInst>( Ctx->is[ name ]->dbg->getAddress() ); // todo: handle error case
-          nvop   = cast<Value>( alloca );
-
-          // map size
-          Value *nsop, *sop = I.getOperand( 1 );
-          ConstantInt *cint = ConstantInt::get( M.getContext(), cast<ConstantInt>( sop )->getValue() );
-          nsop = cast<Value>( cint );
-
-          // map name
-          // todo: handle case where name isn't a global variable
-          GEPOperator *gepop = dyn_cast<GEPOperator>( I.getOperand( 2 ) ); // todo: handle error case
-
-          Value *nop = gepop->getPointerOperand();
-          GlobalVariable *nref = Ctx->renamed[ nop->getName() ];
-
-          // todo: it would be nice to build these by inspecting gepop to make sure we have the right inputs but llvm9
-          //       makes that tedious, so for now let's assume this works (it probably does w/ our global assumption)
-          Constant *idxs[ 2 ] = { ConstantInt::get( M.getContext(), APInt( 64, 0 ) ),
-                                  ConstantInt::get( M.getContext(), APInt( 64, 0 ) ) };
-
-          Constant *ngepop = ConstantExpr::getInBoundsGetElementPtr( nref->getValueType(), nref, idxs );
-
-          Builder.CreateCall( _klee_make_symbolic, { nvop, nsop, ngepop } );
-        } else {
-
-
-
-
-
-        }
+        if ( assume ) { traverseInst( M, Ctx, I, nmap, klee_assume ); }
+        symbolizeVar( M, Ctx, I, nmap, klee_make_symbolic );
       }
     }
   }
