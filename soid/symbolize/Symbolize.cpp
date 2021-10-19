@@ -36,7 +36,7 @@ struct TraversalContext {
 }
 
 struct Location {
-  int           SCC;  // SCC within program of instruction Location, in post-order
+  int           scc;  // SCC within program of instruction Location, in post-order
   DILocalScope *S;    // debugging scope
 
   Function     *F;    // enclosing function
@@ -380,7 +380,7 @@ void Symbolize::findVariables( Module &M, Context *Ctx ) {
             Ctx->ps[ ename ]->decl = dyn_cast<Value>( &I );
 
             Ctx->ps[ ename ]->loc = new Location();
-            Ctx->ps[ ename ]->loc->SCC = si;
+            Ctx->ps[ ename ]->loc->scc = si;
 
             Ctx->ps[ ename ]->loc->F  = F;
             Ctx->ps[ ename ]->loc->BB = &BB;
@@ -413,7 +413,23 @@ void Symbolize::findVariables( Module &M, Context *Ctx ) {
  */
 void Symbolize::traverseOp( TraversalContext *TCtx, Value *op ) {
 
-  if ( Instruction *I = dyn_cast<Instruction>( op ) ) Symbolize::traverseInst( TCtx, I );
+  int scc, cscc;
+  std::string name;
+
+  if ( Instruction *I = dyn_cast<Instruction>( op ) ) {
+    if ( !known_name( op, TCtx ) ) return Symbolize::traverseInst( TCtx, I );
+
+    name.clear(); name = TCtx->nmap[ I ];
+    cscc = TCtx->min_scc;
+    scc  = TCtx->Ctx->is[ name ]->loc->scc;
+    TCtx->min_scc = std::min( scc, cscc );
+
+    if ( TCtx->min_scc == scc ) {
+      if ( TCtx->min_scc != cscc ) TCtx->is->clear();
+      TCtx->is->push_back( I );
+    }
+  }
+
   return;
 }
 
@@ -425,8 +441,6 @@ void Symbolize::traverseOp( TraversalContext *TCtx, Value *op ) {
  */
 void Symbolize::traverseInst( TraversalContext *TCtx, Instruction *I ) {
 
-  int scc;
-  std::string name;
 
   // basic idea of how traversal works:
   //
@@ -441,16 +455,9 @@ void Symbolize::traverseInst( TraversalContext *TCtx, Instruction *I ) {
   //
   // given the resultant list of locations, we recurse through the instruction tree a second time, and transfer everything
   // over to the program at them
+
   for ( Value *op : I->operands() ) {
-
-    if ( !TCtx->located ) {
-      if ( !known_name( op ) ) Symbolize::traverseOp( TCtx, op );
-
-      name.clear(); name = TCtx->nmap[ op ];
-      scc = TCtx->Ctx->is[ name ]->loc->SCC;
-      TCtx->min_scc = std::min( TCtx->min_scc, scc );
-    }
-
+    if ( !TCtx->located ) return Symbolize::traverseOp( TCtx, op );
 
   }
 
