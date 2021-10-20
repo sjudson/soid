@@ -1,4 +1,5 @@
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -21,19 +22,6 @@
 #include <toml++/toml.h>
 
 using namespace llvm;
-
-struct TraversalContext {
-  Module  &M;
-  Context &Ctx;
-  std::map<Value*, std::string>& nmap;
-  FunctionCallee &f;
-
-  Instruction &orig;                                     // origin instruction
-  int min_scc;                                           // minimal scc
-  std::vector<std::reference_wrapper<Instruction>> is;   // instructions in minimal scc
-  bool located;                                          // whether we've located everything
-  std::vector<std::reference_wrapper<Instruction>> locs; // locations to place klee_assume
-}
 
 struct Location {
   int           scc;  // SCC within program of instruction Location, in post-order
@@ -78,7 +66,7 @@ struct Context {
   // map program variable names to var objects ( for program, not query )
   std::map<std::string, Var*> ps;
   // map scc to functions it includes
-  std::map<int, std::vector<std::reference_wrapper<Instruction>>> sccmap;
+  std::map<int, std::vector<Function*>> sccmap;
 };
 
 /***
@@ -87,6 +75,18 @@ struct Context {
  * quick lookup to see whether a var exists for a variable
  */
 bool is_found( std::string s, std::map<std::string, Var*>& ms ) { return ms.find( s ) != ms.end(); }
+
+struct TraversalContext {
+  Module  *M;
+  Context *Ctx;
+  FunctionCallee *f;
+
+  Instruction *orig;              // origin instruction
+  int min_scc;                    // minimal scc
+  std::vector<Instruction*> is;   // instructions in minimal scc
+  bool located;                   // whether we've located everything
+  std::vector<Instruction*> locs; // locations to place klee_assume
+};
 
 /***
  * known_name
@@ -118,9 +118,10 @@ struct Symbolize : PassInfoMixin<Symbolize> {
 
   void findVariables( Module &M, Context *Ctx );
 
-  void traverseOp( TraversalContext *TCtx, Value *op );
-  void traverseInst( TraversalContext *TCtx, Instruction *I );
-  void symbolizeVar( Module &M, Context *Ctx, Instruction &I, std::map<Value*, std::string>& nmap, FunctionCallee &kms );
+  void traverseOp( TraversalContext *TCtx, Value *op, std::map<Value*, std::string>& nmap );
+  void traverseInst( TraversalContext *TCtx, Instruction *I, std::map<Value*, std::string>& nmap );
+  void traverse( TraversalContext *TCtx, Instruction *I, std::map<Value*, std::string>& nmap );
+  void symbolizeVar( Module &M, Context *Ctx, Instruction *I, std::map<Value*, std::string>& nmap, FunctionCallee &kms );
 
   void transferGlobals( Module &M, Context *Ctx );
   void transferSymbolics( Module &M, Context *Ctx );
@@ -349,6 +350,7 @@ void Symbolize::findVariables( Module &M, Context *Ctx ) {
 
     for ( std::vector<CallGraphNode*>::const_iterator n = ns.begin(), ne = ns.end(); n != ne; ++n ) {
       F = ( *n )->getFunction();
+      Ctx->sccmap[ si ].push_back( F );
 
       if ( !F ) continue; // todo: explore why this is necessary
 
@@ -411,23 +413,30 @@ void Symbolize::findVariables( Module &M, Context *Ctx ) {
  *
  * process operands in instruction tree ( for klee_assume )
  */
-void Symbolize::traverseOp( TraversalContext *TCtx, Value *op ) {
+void Symbolize::traverseOp( TraversalContext *TCtx, Value *op, std::map<Value*, std::string>& nmap ) {
 
   int scc, cscc;
   std::string name;
 
   if ( Instruction *I = dyn_cast<Instruction>( op ) ) {
-    if ( !known_name( op, TCtx ) ) return Symbolize::traverseInst( TCtx, I );
 
-    name.clear(); name = TCtx->nmap[ I ];
-    cscc = TCtx->min_scc;
-    scc  = TCtx->Ctx->is[ name ]->loc->scc;
-    TCtx->min_scc = std::min( scc, cscc );
+    if ( !TCtx->located ) {
+      if ( !known_name( op, nmap ) ) return Symbolize::traverseInst( TCtx, I, nmap );
 
-    if ( TCtx->min_scc == scc ) {
-      if ( TCtx->min_scc != cscc ) TCtx->is->clear();
-      TCtx->is->push_back( I );
+      name.clear(); name = nmap[ op ];
+      cscc = TCtx->min_scc;
+      scc  = TCtx->Ctx->is[ name ]->loc->scc;
+      TCtx->min_scc = std::min( scc, cscc );
+
+      if ( TCtx->min_scc == scc ) {
+        if ( TCtx->min_scc != cscc ) TCtx->is.clear();
+        TCtx->is.push_back( I );
+      }
+
+      return;
     }
+
+    // else...
   }
 
   return;
@@ -439,8 +448,24 @@ void Symbolize::traverseOp( TraversalContext *TCtx, Value *op ) {
  *
  * process instructions in tree ( for klee_assume )
  */
-void Symbolize::traverseInst( TraversalContext *TCtx, Instruction *I ) {
+void Symbolize::traverseInst( TraversalContext *TCtx, Instruction *I, std::map<Value*, std::string>& nmap ) {
 
+  for ( Value *op : I->operands() ) {
+    if ( !TCtx->located ) return Symbolize::traverseOp( TCtx, op, nmap );
+
+    
+  }
+
+  return;
+}
+
+
+/***
+ * traverse
+ *
+ * traverse tree for klee_assume instruction and copy over
+ */
+void Symbolize::traverse( TraversalContext *TCtx, Instruction *I, std::map<Value*, std::string>& nmap ) {
 
   // basic idea of how traversal works:
   //
@@ -450,18 +475,41 @@ void Symbolize::traverseInst( TraversalContext *TCtx, Instruction *I ) {
   // that we see for an alloca instruction with the name of an input variable, and keep track of all of those instructions
   // that lie within that scc
   //
-  // if the scc has a single function in it, we build a dominator tree and figure out where we can put the klee_assume call,
-  // while if the scc has multiple functions, we stick the klee_assume in at the top of every function in the next scc
+  // if the scc has a single function in it, we build a post-dominator tree and figure out where we can put the klee_assume
+  // call, while if there is no dominator or if the the scc has multiple functions, we stick the klee_assume in at the top
+  // of every function in the next scc
   //
   // given the resultant list of locations, we recurse through the instruction tree a second time, and transfer everything
   // over to the program at them
+  traverseInst( TCtx, I, nmap );
 
-  for ( Value *op : I->operands() ) {
-    if ( !TCtx->located ) return Symbolize::traverseOp( TCtx, op );
+  bool simple;
+  if ( simple == ( TCtx->Ctx->sccmap[ TCtx->min_scc ].size() == 1 ) ) {
+    Function *fp = TCtx->Ctx->sccmap[ TCtx->min_scc ].front();
+    PostDominatorTree PDT = PostDominatorTree( *fp );
 
+    Instruction *mark = nullptr;
+
+    for ( Instruction *i : TCtx->is ) {
+      bool found = true;
+
+      for ( Instruction *j : TCtx->is ) {
+        if ( i == j ) continue;
+
+        if ( !PDT.dominates( i->getParent(), j->getParent() ) ) { found = false; break; }
+      }
+
+      if ( found ) { mark = i; break; }
+    }
+    if ( mark == nullptr ) simple = false;
+
+    if ( simple ) TCtx->locs.push_back( mark->getParent()->getTerminator() );
   }
 
-  return;
+  if ( !simple ) {} // todo: handle non-simple case
+
+  TCtx->located = true;
+  traverseInst( TCtx, I, nmap );
 }
 
 
@@ -470,7 +518,7 @@ void Symbolize::traverseInst( TraversalContext *TCtx, Instruction *I ) {
  *
  * make variable symbolic ( for klee_make_symbolic )
  */
-void Symbolize::symbolizeVar( Module &M, Context *Ctx, Instruction &I, std::map<Value*, std::string>& nmap, FunctionCallee &kms ) {
+void Symbolize::symbolizeVar( Module &M, Context *Ctx, Instruction *I, std::map<Value*, std::string>& nmap, FunctionCallee &kms ) {
 
   std::string name;    // variable name
   Value *op;           // current query operand
@@ -483,8 +531,8 @@ void Symbolize::symbolizeVar( Module &M, Context *Ctx, Instruction &I, std::map<
   GlobalVariable *gv;  // global string ngep points to
 
   // 1. we find the variable in the program
-  op = I.getOperand( 0 );
-  if ( nmap.find( op ) == nmap.end() ); // todo: handle error case
+  op = I->getOperand( 0 );
+  if ( !known_name( op, nmap ) ); // todo: handle error case
 
   name.clear(); name = nmap[ op ];
 
@@ -495,12 +543,12 @@ void Symbolize::symbolizeVar( Module &M, Context *Ctx, Instruction &I, std::map<
   // 3. then we find variable location itself
   alloca = dyn_cast<AllocaInst>( Ctx->is[ name ]->dbg->getAddress() ); // todo: handle error case
 
-  // 4. we next build the size input within the programs context ( M )
-  cint = ConstantInt::get( M.getContext(), cast<ConstantInt>( I.getOperand( 1 ) )->getValue() );
+  // 4. we next build the size input within the program's context ( M )
+  cint = ConstantInt::get( M.getContext(), cast<ConstantInt>( I->getOperand( 1 ) )->getValue() );
 
   // 5. and then we form a GEP to the global variable (potentally with its new name) in the program
   // todo: handle case where name isn't a global variable
-  gep = dyn_cast<GEPOperator>( I.getOperand( 2 ) ); // todo: handle error case
+  gep = dyn_cast<GEPOperator>( I->getOperand( 2 ) ); // todo: handle error case
   gv  = Ctx->renamed[ gep->getPointerOperand()->getName() ];
 
   // todo: it would be nice to build these by inspecting gepop to make sure we have the right inputs but llvm9
@@ -552,8 +600,8 @@ void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
   std::string stream, name;
   raw_string_ostream osn( stream );
 
-  std::vector<std::reference_wrapper<Instruction>> sis;
-  std::vector<std::reference_wrapper<Instruction>> ais;
+  std::vector<Instruction*> sis;
+  std::vector<Instruction*> ais;
 
   for ( Function &F : *Symbolize::Query ) {
     for ( BasicBlock &BB : F ) {
@@ -579,27 +627,26 @@ void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
         if ( ( assume = ( fname != "klee_make_symbolic" ) ) && ( fname != "klee_assume" ) ) continue;
 
         ( assume )
-          ? ais.push_back( I )
-          : sis.push_back( I );
+          ? ais.push_back( &I )
+          : sis.push_back( &I );
       }
     }
   }
-  for ( std::vector<std::reference_wrapper<Instruction>>::reverse_iterator si = sis.rbegin(); si != sis.rend(); ++si )
+  for ( std::vector<Instruction*>::reverse_iterator si = sis.rbegin(); si != sis.rend(); ++si )
     symbolizeVar( M, Ctx, *si, nmap, klee_make_symbolic );
 
   TraversalContext TCtx;
-  TCtx.M    = M;
+  TCtx.M    = &M;
   TCtx.Ctx  = Ctx;
-  TCtx.nmap = nmap;
-  TCtx.f    = klee_assume;
-  for ( std::vector<std::reference_wrapper<Instruction>>::reverse_iterator ai = ais.rbegin(); ai != ais.rend(); ++ai ) {
-    TCtx.orig = ai;
+  TCtx.f    = &klee_assume;
+  for ( std::vector<Instruction*>::reverse_iterator ai = ais.rbegin(); ai != ais.rend(); ++ai ) {
+    TCtx.orig = *ai;
     TCtx.min_scc = INT_MAX;
     TCtx.is.clear();
     TCtx.located = false;
     TCtx.locs.clear();
 
-    traverseInst( &TCtx, ai );
+    traverse( &TCtx, *ai, nmap );
   }
 
   return;
