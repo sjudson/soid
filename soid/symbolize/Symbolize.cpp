@@ -1,6 +1,7 @@
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
@@ -13,6 +14,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 
 #include <optional>
 #include <iostream>
@@ -81,7 +84,9 @@ struct TraversalContext {
   Context *Ctx;
   FunctionCallee *f;
 
-  Instruction *orig;              // origin instruction
+  Function *copy;                 // function in query context with copy of klee_assume expression
+  Function *clone;                // function in program context with clone of klee_assume expression
+  Instruction *orig;              // original instruction
   int min_scc;                    // minimal scc
   std::vector<Instruction*> is;   // instructions in minimal scc
   bool located;                   // whether we've located everything
@@ -419,10 +424,10 @@ void Symbolize::traverseOp( TraversalContext *TCtx, Value *op, std::map<Value*, 
   std::string name;
 
   if ( Instruction *I = dyn_cast<Instruction>( op ) ) {
+    if ( !known_name( op, nmap ) ) return Symbolize::traverseInst( TCtx, I, nmap );
 
+    // if we are locating, then push it onto our list of relevant naming instructions
     if ( !TCtx->located ) {
-      if ( !known_name( op, nmap ) ) return Symbolize::traverseInst( TCtx, I, nmap );
-
       name.clear(); name = nmap[ op ];
       cscc = TCtx->min_scc;
       scc  = TCtx->Ctx->is[ name ]->loc->scc;
@@ -436,7 +441,10 @@ void Symbolize::traverseOp( TraversalContext *TCtx, Value *op, std::map<Value*, 
       return;
     }
 
-    // else...
+    // otherwise, create a new alloca that'll be deleted and the reference replaced when we copy it in
+    BasicBlock *end = &( TCtx->copy->back() );
+    AllocaInst *ai  = cast<AllocaInst>( I );
+    AllocaInst *nai = new AllocaInst( ai->getType(), ai->getType()->getAddressSpace(), ai->getArraySize(), ai->getAlignment(), ai->getName(), end );
   }
 
   return;
@@ -450,11 +458,12 @@ void Symbolize::traverseOp( TraversalContext *TCtx, Value *op, std::map<Value*, 
  */
 void Symbolize::traverseInst( TraversalContext *TCtx, Instruction *I, std::map<Value*, std::string>& nmap ) {
 
-  for ( Value *op : I->operands() ) {
-    if ( !TCtx->located ) return Symbolize::traverseOp( TCtx, op, nmap );
+  for ( Value *op : I->operands() ) Symbolize::traverseOp( TCtx, op, nmap );
 
-    
-  }
+  if ( !TCtx->located ) return;
+
+  Instruction *In = I->clone();
+  In->insertAfter( TCtx->copy->back().getTerminator() );
 
   return;
 }
@@ -481,6 +490,10 @@ void Symbolize::traverse( TraversalContext *TCtx, Instruction *I, std::map<Value
   //
   // given the resultant list of locations, we recurse through the instruction tree a second time, and transfer everything
   // over to the program at them
+  //
+  // this is done by copying everything required into a new function and cloning it. For the moment this won't support either
+  // functions or global variables within klee_assume calls, but there's nothing that would prevent that in practice by just
+  // cloning them over as well
   traverseInst( TCtx, I, nmap );
 
   bool simple;
@@ -495,21 +508,35 @@ void Symbolize::traverse( TraversalContext *TCtx, Instruction *I, std::map<Value
 
       for ( Instruction *j : TCtx->is ) {
         if ( i == j ) continue;
-
         if ( !PDT.dominates( i->getParent(), j->getParent() ) ) { found = false; break; }
       }
 
       if ( found ) { mark = i; break; }
     }
     if ( mark == nullptr ) simple = false;
-
     if ( simple ) TCtx->locs.push_back( mark->getParent()->getTerminator() );
   }
 
   if ( !simple ) {} // todo: handle non-simple case
 
+  TCtx->copy  = cast<Function>( Symbolize::Query->getOrInsertFunction( "__soid__query", Type::getVoidTy( Symbolize::Query->getContext() ) ).getCallee() );
+  TCtx->clone = cast<Function>( TCtx->M->getOrInsertFunction( "__soid__program", Type::getVoidTy( TCtx->M->getContext() ) ).getCallee() );
+
   TCtx->located = true;
   traverseInst( TCtx, I, nmap );
+
+  // clone query into our module
+  ValueToValueMapTy VMap;
+  Function::arg_iterator nas = TCtx->clone->arg_begin();
+  for ( Function::const_arg_iterator oas = TCtx->copy->arg_begin(), oae = TCtx->copy->arg_end(); oas != oae; ++oas, ++nas ) VMap[ &*oas ] = &*nas;
+
+  SmallVector<ReturnInst*, 8> rets;
+  CloneFunctionInto( TCtx->clone, TCtx->copy, VMap, true, rets );
+
+  // todo: copy stuff over to right place
+
+  TCtx->copy->removeFromParent();
+  TCtx->clone->removeFromParent();
 }
 
 
@@ -577,20 +604,18 @@ void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
   CallInst *CI;
   Function *called;
 
-  Function *_klee_make_symbolic = Symbolize::Query->getFunction( "klee_make_symbolic" );
   Function *_klee_assume        = Symbolize::Query->getFunction( "klee_assume" );
+  Function *_klee_make_symbolic = Symbolize::Query->getFunction( "klee_make_symbolic" );
 
   if ( !_klee_make_symbolic ) {
     errs() << "Cannot find any symbolic variables in query file.\n\n";
     exit( 1 );
   }
 
-  FunctionCallee klee_make_symbolic, klee_assume;
-
-  klee_make_symbolic = M.getOrInsertFunction( "klee_make_symbolic", _klee_make_symbolic->getFunctionType(), _klee_make_symbolic->getAttributes() );
-
   // todo: figure out if klee_assume may not exist (do we just e.g. force it with klee_assume( true ) in the header?)
-  klee_assume = M.getOrInsertFunction( "klee_assume", _klee_assume->getFunctionType(), _klee_assume->getAttributes() );
+  FunctionCallee klee_assume, klee_make_symbolic;
+  klee_assume        = M.getOrInsertFunction( "klee_assume", _klee_assume->getFunctionType(), _klee_assume->getAttributes() );
+  klee_make_symbolic = M.getOrInsertFunction( "klee_make_symbolic", _klee_make_symbolic->getFunctionType(), _klee_make_symbolic->getAttributes() );
 
   DbgDeclareInst  *dbgDec;
   DILocalVariable *dbgVar;
@@ -603,43 +628,45 @@ void Symbolize::transferSymbolics( Module &M, Context *Ctx ) {
   std::vector<Instruction*> sis;
   std::vector<Instruction*> ais;
 
-  for ( Function &F : *Symbolize::Query ) {
-    for ( BasicBlock &BB : F ) {
-      for ( Instruction &I : BB ) {
-        if ( dbgDec = Symbolize::extractDeclare( I ) ) {
+  // because we automatically build query, we know it always contains a single function
+  Function *main = Symbolize::Query->getFunction( "main" );
 
-          alloca = dyn_cast<AllocaInst>( dbgDec->getAddress() ); // todo: handle error case
+  for ( BasicBlock &BB : *main ) {
+    for ( Instruction &I : BB ) {
+      if ( dbgDec = Symbolize::extractDeclare( I ) ) {
 
-          dbgVar = Symbolize::extractDebug( I );
-          stream.clear(); osn << dbgVar->getName().str(); osn.flush();
-          name.clear(); name = osn.str();
+        alloca = dyn_cast<AllocaInst>( dbgDec->getAddress() ); // todo: handle error case
 
-          nmap[ dyn_cast<Value>( alloca ) ] = name;
+        dbgVar = Symbolize::extractDebug( I );
+        stream.clear(); osn << dbgVar->getName().str(); osn.flush();
+        name.clear(); name = osn.str();
 
-          continue;
-        }
-        if ( !( CI = dyn_cast<CallInst>( &I ) ) ) continue;
+        nmap[ dyn_cast<Value>( alloca ) ] = name;
 
-        called = CI->getCalledFunction();
-        if ( !called ) continue;  // todo: explore why this is necessary
-        fname = called->getName();
-
-        if ( ( assume = ( fname != "klee_make_symbolic" ) ) && ( fname != "klee_assume" ) ) continue;
-
-        ( assume )
-          ? ais.push_back( &I )
-          : sis.push_back( &I );
+        continue;
       }
+      if ( !( CI = dyn_cast<CallInst>( &I ) ) ) continue;
+
+      called = CI->getCalledFunction();
+      if ( !called ) continue;  // todo: explore why this is necessary
+      fname = called->getName();
+
+      if ( ( assume = ( fname != "klee_make_symbolic" ) ) && ( fname != "klee_assume" ) ) continue;
+
+      ( assume )
+        ? ais.push_back( &I )
+        : sis.push_back( &I );
     }
   }
-  for ( std::vector<Instruction*>::reverse_iterator si = sis.rbegin(); si != sis.rend(); ++si )
-    symbolizeVar( M, Ctx, *si, nmap, klee_make_symbolic );
+  for ( std::vector<Instruction*>::reverse_iterator si = sis.rbegin(); si != sis.rend(); ++si ) symbolizeVar( M, Ctx, *si, nmap, klee_make_symbolic );
 
   TraversalContext TCtx;
   TCtx.M    = &M;
   TCtx.Ctx  = Ctx;
   TCtx.f    = &klee_assume;
   for ( std::vector<Instruction*>::reverse_iterator ai = ais.rbegin(); ai != ais.rend(); ++ai ) {
+    TCtx.copy  = nullptr;
+    TCtx.clone = nullptr;
     TCtx.orig = *ai;
     TCtx.min_scc = INT_MAX;
     TCtx.is.clear();
