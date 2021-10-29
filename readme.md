@@ -57,7 +57,7 @@ This will build `klee-uclibc`, `klee`, and `cvc5`, as well as setup a Python `vi
 
 `soid` is composed of three main parts: the `soid` tool itself, `soidlib`, and `Symbolize`.
 
-The first part, the `soid` tool itself, lives at `./src/soid`. It is a Python program that takes as input the (i) location of a source program and (ii) a set of queries formulated as a python package. It then executes the queries on the source program, and provides a detailed print out of the result.
+The first part, the `soid` tool itself, lives at `./src/soid`. It is a Python program that takes as input (i) the location of the makefile for a source program written in c++ with suitable symbolic execution annotations, and (ii) a set of queries formulated as a python package. It then executes the queries on the source program, and provides a detailed print out of the result.
 
 The second part, `soidlib`, refers to both a python library at `./src/soidlib/soidlib.py` and c++ library at `./src/soidlib/soidlib.h`. The python library supports writing queries, while the c++ library supports writing source programs amenable to analysis using soid (for the moment, it mostly just wraps `klee.h`).
 
