@@ -101,12 +101,19 @@ class Oracle():
         return
 
 
-    def ld_agnt( self, makefile ):
+    def ld_agnt( self, makefile, variants, idx ):
         mdir, _ = os.path.split( makefile )
 
-        # todo: tie in symbolize
+        print( '##################\n## INVOKING KLEE #\n##################\n\n' )
 
-        ret = subprocess.run( [ 'make', 'symbolic' ], cwd = mdir )
+        # todo: tie in symbolize
+        cmd = [ 'make', 'symbolic' ]
+
+        if variants:
+            nm   = self.type + '.' + f'{idx}'
+            cmd += [ f'SOID_QUERY={nm}' ]
+
+        ret = subprocess.run( cmd, cwd = mdir )
         klee_last = mdir + '/klee-last'
 
         i  = 1
@@ -121,9 +128,15 @@ class Oracle():
 
         paths = [ z3.parse_smt2_file( f )[ 0 ] for f in fs ]
 
+        print( '\n\n##################\n## CLEANING KLEE #\n##################\n\n' )
+
         ret = subprocess.run( [ 'make', 'clean' ], cwd = mdir )
 
+        print( '\n\n##################\n## FINISHED KLEE #\n##################' )
+
         self.paths = paths
+        self.build_pi()
+
         return
 
 
@@ -162,8 +175,6 @@ class Oracle():
         self.ld_env( query )
         self.ld_st( query )
         self.ld_bhv( query )
-
-        self.build_pi()
 
         return
 
@@ -517,6 +528,9 @@ class Oracle():
         self.solver.setOption( 'incremental', 'false' )
         self.solver.setOption( 'verbose', 'true' )
         self.solver.setOption( 'verbosity', '2' )
+
+        ###
+        # debugging options
         #self.solver.setOption( 'trace', 'datatypes-check' )
         #self.solver.setOption( 'trace', 'datatypes-proc' )
         #self.solver.setOption( 'trace', 'datatypes-prereg' )
@@ -873,14 +887,18 @@ def parse_args():
 
     parser = argparse.ArgumentParser( description = 'SMT-based oracles for investigating decisions.' )
 
-    parser.add_argument( '-f', '--float', action = 'store_true', default = False, dest = 'float', \
-                         help = 'Use alternative symbolic execution (KLEE) engine with experimental support for floats.' )
     parser.add_argument( '-m', '--make', action = 'store', type = str, default = None, dest = 'make', required = True, \
                          help = 'Location of program makefile; if not a resolveable path soid will attempt to load ./Makefile.' )
     parser.add_argument( '-qs', '-queries', action = 'store', type = str, default = None, dest = 'queries', required = True, \
                          help = 'Location of queries directory; if not a resolveable path soid will attempt to use ./')
+
+    parser.add_argument( '-vs', '--variants', action = 'store_true', default = False, dest = 'variants', \
+                         help = 'Pass variable into makefile allowing use of source code variants.' )
+
     parser.add_argument( '-n', '--enum', action = 'store', type = int, default = 100, dest = 'enum', required = False, \
                          help = 'Number of candidates to enumerate, used for sufficient synthesis queries.' )
+    parser.add_argument( '-f', '--float', action = 'store_true', default = False, dest = 'float', \
+                         help = 'Use alternative symbolic execution (KLEE) engine with experimental support for floats.' )
 
     args = parser.parse_args()
 
@@ -919,9 +937,6 @@ if __name__ == '__main__':
     oracle = Oracle()
     args = parse_args()
 
-    # todo: rework once symbolize is done
-    oracle.ld_agnt( args.make )
-
     path, fn = os.path.split( args.queries )
     sys.path.insert( 0, path )
     qs = importlib.import_module( fn )
@@ -929,9 +944,14 @@ if __name__ == '__main__':
     queries = extract( qs, args, oracle )
     queries.sort( key = lambda query: query.priority, reverse = True )
 
-    print( oracle.introduction )
+    print( oracle.introduction + '\n\n' )
 
+    idx = 1
     while queries:
         nxt = queries.pop()
+
         oracle.load( nxt )
+        oracle.ld_agnt( args.make, args.variants, idx )
+        idx += 1
+
         oracle.run()

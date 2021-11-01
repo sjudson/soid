@@ -14,10 +14,10 @@ import inspect
 _cf = namedtuple( 'counterfactual', [ 'single', 'necessary', 'sufficient' ] )
 _bh = namedtuple( 'behavior', [ 'necessary', 'sufficient' ] )
 
-verification   = 0
-counterfactual = _cf( single = 1, necessary = 2, sufficient = 3 )
-behavior       = _bh(             necessary = 4, sufficient = 5 )
-agent          = 6
+verification   = 'verification'
+counterfactual = _cf( single = 'counterfactual.single', necessary = 'counterfactual.necessary', sufficient = 'counterfactual.sufficient' )
+behavior       = _bh(                                   necessary = 'behavior.necessary',       sufficient = 'behaviro.sufficient' )
+agent          = 'agent'
 
 
 
@@ -110,7 +110,7 @@ def _type_resolve( args ):
 
     largs  = list( args )
     sargs  = [ str( arg ) for arg in largs ]
-    
+
     pretty = None
     for i, arg in enumerate( args ):
 
@@ -337,7 +337,7 @@ class Soid():
             eqn = f( *args, **kwargs )
             if isinstance( eqn, bool ):
                 eqn = _fbool( eqn )
-                
+
             neqn = And( eqn, self.__Sext )
             setattr( neqn, 'soid_pp', eqn.soid_pp )
 
