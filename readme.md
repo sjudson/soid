@@ -71,6 +71,16 @@ $ source ./venv/bin/activate
 ```
 Then invoke the `soid` tool, specifying the source program makefile `-m` and the directory containing the python module with the queries `-qs`, e.g.,:
 ```
-$ ./soid/soid -m ./examples/microwave/src/Makefile -qs ./examples/microwave/queries
+$ ./soid/soid -vs -m ./examples/microwave/src/Makefile -qs ./examples/microwave/queries
 ```
 will execute the microwave example.
+
+##### options
+
+Soid takes five options:
+
+- `-m`, `--make`: the location of the source program makefile, defaults to `./Makefile`.
+- `-qs`, `--queries`: the location of the queries formulated as a python package, defaults to `./`.
+- `-vs`, `--variants`: passes a `SOID_QUERY=XXX` variable to the makefile to allow using source code variants for different queries.
+- `-n`, `--enum`: number of candidates to enumerate for synthesis queries (not yet implemented).
+- `-f`, `--float`: whether to use variant of KLEE with experimental support for floats (not yet implemented).
