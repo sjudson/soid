@@ -4,7 +4,7 @@
 
 First you'll need to clone the repository with submodules:
 ```shell
-$ git clone --recurse-submodules -j8 git@github.com:sjudson/soid.git
+$ git clone --recurse-submodules -j8 git@gitlab.com:rose-yale/soid.git
 ```
 
 Then, run on debian/ubuntu:
