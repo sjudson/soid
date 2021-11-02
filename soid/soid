@@ -18,16 +18,20 @@ import z3
 import pycvc5
 
 
-
+###
+# Oracle
+#
+# the core class that formulates and discharges queries
+#
 class Oracle():
 
     def __init__( self ):
 
         self.runners = {
             soidlib.verification              : self.verif,
-            soidlib.counterfactual.single     : self.ocf,
-            soidlib.counterfactual.necessary  : self.ncf,
-            soidlib.counterfactual.sufficient : self.scf,
+            soidlib.counterfactual.single     : self.scf,
+            soidlib.counterfactual.necessary  : self.nycf,
+            soidlib.counterfactual.sufficient : self.stcf,
             #soidlib.behavior.necessary        : self.nbv,
             #soidlib.behavior.sufficient       : self.sbv,
             #soidlib.agent                     : self.agent
@@ -40,6 +44,11 @@ class Oracle():
         return
 
 
+    ####
+    # ld_env
+    #
+    # loads environmental constraints registered through soidlib
+    #
     def ld_env( self, query ):
 
         ret = None
@@ -59,6 +68,11 @@ class Oracle():
         return
 
 
+    ####
+    # ld_env
+    #
+    # loads state constraints registered through soidlib
+    #
     def ld_st( self, query ):
 
         ret = None
@@ -78,6 +92,11 @@ class Oracle():
         return
 
 
+    ####
+    # ld_bhv
+    #
+    # loads behavioral constraints registered through soidlib
+    #
     def ld_bhv( self, query ):
 
         ret = None
@@ -101,6 +120,11 @@ class Oracle():
         return
 
 
+    ####
+    # ld_bhv
+    #
+    # invokes KLEE to load agent constraints
+    #
     def ld_agnt( self, makefile, variants, idx ):
         mdir, _ = os.path.split( makefile )
 
@@ -140,6 +164,11 @@ class Oracle():
         return
 
 
+    ####
+    # build_pi
+    #
+    # combines paths from KLEE to generate agent constraints
+    #
     def build_pi( self ):
 
         symbls  = [ soidlib.types.util.bv32arr( '__soid__' + str( p ) ) for p in self.P ]
@@ -153,6 +182,11 @@ class Oracle():
         return
 
 
+    ####
+    # load
+    #
+    # loads agent constraints and query constraints, and sets metadata
+    #
     def load( self, query ):
 
         self.ct += 1
@@ -179,6 +213,11 @@ class Oracle():
         return
 
 
+    ####
+    # reset
+    #
+    # clears the oracle in-between invocations
+    #
     def reset( self ):
 
         self.synth  = None
@@ -202,6 +241,11 @@ class Oracle():
         return
 
 
+    ####
+    # recurse
+    #
+    # walks DFS through formula tree in z3Py
+    #
     def recurse( self, expr, I ):
         cs = []
         for child in expr.children():
@@ -211,6 +255,11 @@ class Oracle():
         return cs, I
 
 
+    ####
+    # z3_to_cvc5
+    #
+    # converts an expression from z3Py to CVC5 python API, continues recursion
+    #
     def z3_to_cvc5( self, expr, I = {} ):
 
         if expr == None:
@@ -520,7 +569,11 @@ class Oracle():
         if z3.is_fprm_sort( expr ):
             pass
 
-
+    ####
+    # prep_sygus
+    #
+    # setup options + logic + grammar for sygus for synthesis
+    #
     def prep_sygus( self, I ):
 
         # set options
@@ -631,7 +684,12 @@ class Oracle():
         return g
 
 
+    ####
+    # query_pp
+    #
+    # pretty print logic formulas
     # todo: either get beautifHOL working or reimplement it in Python
+    #
     def query_pp( self, name, query ):
 
         if isinstance( query, bool ):
@@ -649,6 +707,11 @@ class Oracle():
         return
 
 
+    ####
+    # model_recurse
+    #
+    # walk through a model and convert bitvector arrays to reals/ints for pretty printing
+    #
     def model_recurse( self, expr, tier = 3 ):
 
         # todo: make robust
@@ -666,7 +729,11 @@ class Oracle():
                 elif z3.is_store( expr.children()[ 0 ] ) and isinstance( expr.children()[ 2 ], z3.BitVecNumRef ):
                     return ( expr.children()[ 2 ].as_long() << tier ) + self.model_recurse( expr.children()[ 0 ], tier - 1 )
 
-
+    ####
+    # model_pp
+    #
+    # pretty print a model as a counterexample or counterfactual
+    #
     def model_pp( self, model ):
         vs = [ d for d in model.decls() if '__soid__' not in d.name() ]
         nl = max( [ len( d.name() ) for d in vs ] )
@@ -692,7 +759,12 @@ class Oracle():
         return
 
 
+    ####
+    # synthd_pp
+    #
+    # pretty print a synthesized function (formula)
     # copied from https://github.com/cvc5/cvc5/blob/39f90ff035a5e5024fe0cd11b965f1103d83e88d/examples/api/python/utils.py
+    #
     def synthd_pp( self, terms, solutions ):
 
         def define_fun_to_string( f, params, body ):
@@ -722,10 +794,19 @@ class Oracle():
         return
 
 
+    ####
+    # run
+    #
+    # invoke appropriate runner for type of query
     def run( self ):
         self.runners[ self.type ]()  # todo: handle error case
 
 
+    ####
+    # verif_pp
+    #
+    # pretty print output of verification query
+    #
     def verif_pp( self, unsat, model = None ):
         ex = soidlib.symbols.true if self.expect else soidlib.symbols.false
         eq = ( unsat == self.expect )
@@ -762,6 +843,11 @@ class Oracle():
         )
 
 
+    ####
+    # scf_pp
+    #
+    # pretty print output of single counterfactual query
+    #
     def scf_pp( self, unsat, model = None ):
         ex = soidlib.symbols.true if self.expect else soidlib.symbols.false
         eq = ( not unsat == self.expect )
@@ -798,6 +884,11 @@ class Oracle():
         )
 
 
+    ####
+    # verif
+    #
+    # execute verification query
+    #
     def verif( self ):
         self.solver.add(
             z3.Not(
@@ -818,7 +909,12 @@ class Oracle():
         return self.verif_pp( unsat, model )
 
 
-    def ocf( self ):
+    ####
+    # scf
+    #
+    # execute single counterfactual query
+    #
+    def scf( self ):
         self.solver.add(
             z3.And(
                 z3.And( self.phi(), self.vphi(), self.pi() ),
@@ -838,7 +934,12 @@ class Oracle():
         return self.scf_pp( unsat )
 
 
-    def ncf( self ):
+    ####
+    # nycf
+    #
+    # execute necessary counterfactual query
+    #
+    def nycf( self ):
 
         phi,  I = self.z3_to_cvc5( self.phi() )
         vphi, I = self.z3_to_cvc5( self.vphi(), I )
@@ -872,7 +973,12 @@ class Oracle():
             self.synthd_pp( terms, self.solver.getSynthSolutions( terms ) )
 
 
-    def scf( self ):
+    ####
+    # nycf
+    #
+    # execute sufficient counterfactual query
+    #
+    def stcf( self ):
         pass
 
 
@@ -882,7 +988,11 @@ class Oracle():
 ##########################
 
 
-
+####
+# parse_args
+#
+# parse command line arguments
+#
 def parse_args():
 
     parser = argparse.ArgumentParser( description = 'SMT-based oracles for investigating decisions.' )
@@ -910,6 +1020,11 @@ def parse_args():
     return args
 
 
+####
+# extract
+#
+# recurse through queries module and find all queries
+#
 def extract( qs, args, oracle, queue = [] ):
 
     if 'Soid' not in dir( qs ) and 'soidlib' not in dir( qs ):

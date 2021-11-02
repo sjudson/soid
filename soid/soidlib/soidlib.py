@@ -26,18 +26,38 @@ agent          = 'agent'
 ######################
 
 
+####
+# _bv32arr
+#
+# convert int variable to (Array (_ BitVec 32) (_ BitVec 8))
+#
 def _bv32arr( x ):
     return z3.Array( x, z3.BitVecSort( 32 ), z3.BitVecSort( 8 ) )
 
 
+####
+# _cint_to_bv32arr
+#
+# convert constant int to (Array (_ BitVec 32) (_ BitVec 8))
+#
 def _cint_to_bv32( x ):
     return z3.BitVecVal( 1 * x, 32 )   # implicit bool conversion
 
 
+####
+# _cbool_to_bv32arr
+#
+# convert constant bool to (Array (_ BitVec 32) (_ BitVec 8))
+#
 def _cbool_to_bv32( x ):
     return _cint_to_bv32( x )
 
 
+####
+# _bv32arr_to_bv32
+#
+# convert (Array (_ BitVec 32) (_ BitVec 8)) to (_ BitVec 32)
+#
 def _bv32arr_to_bv32( x ):
     return z3.Concat( z3.Select( x, z3.BitVecVal( 3, 32 ) ),
                       z3.Select( x, z3.BitVecVal( 2, 32 ) ),
@@ -45,6 +65,11 @@ def _bv32arr_to_bv32( x ):
                       z3.Select( x, z3.BitVecVal( 0, 32 ) ) )
 
 
+####
+# _bv32
+#
+# parse declaration of int or bool and turn into z3 expression
+#
 def _bv32( decl ):
 
     if decl == 'bool':
@@ -100,12 +125,22 @@ def _bv32( decl ):
         return __inner
 
 
+####
+# _fbool
+#
+# declare constant bool
+#
 def _fbool( val ):
     var = z3.BoolVal( val )
     setattr( var, 'soid_pp', symbols.true if val else symbols.false )
     return var
 
 
+####
+# _type_resolve
+#
+# parse formula and resolve everything into z3 types
+#
 def _type_resolve( args ):
 
     largs  = list( args )
@@ -158,28 +193,28 @@ types   = _ty( bool = _bv32( 'bool' ), int = _bv32( 'int' ), u32 = _bv32( 'u32' 
 
 
 _and = chr( int( '2227', 16 ) )
-_or  = chr( int( '2228', 16) )
-_not = chr( int( '00AC', 16) )
-_imp = chr( int( '2192', 16) )
-_iff = chr( int( '27F7', 16) )
-_xor = chr( int( '2295', 16) )
-_dom = chr( int( '1D53B', 16) )
-_t   = chr( int( '22A4', 16) )
-_f   = chr( int( '22A5', 16) )
-_uni = chr( int( '2200', 16) )
-_exi = chr( int( '2203', 16) )
-_nex = chr( int( '2204', 16) )
-_def = chr( int( '2254', 16) )
-_prv = chr( int( '22A2', 16) )
-_npv = chr( int( '22AC', 16) )
-_mod = chr( int( '22A8', 16) )
-_nmd = chr( int( '22AD', 16) )
-_ctf = chr( int( '25A1', 16) ) + _imp
+_or  = chr( int( '2228', 16 ) )
+_not = chr( int( '00AC', 16 ) )
+_imp = chr( int( '2192', 16 ) )
+_iff = chr( int( '27F7', 16 ) )
+_xor = chr( int( '2295', 16 ) )
+_dom = chr( int( '1D53B', 16 ) )
+_t   = chr( int( '22A4', 16 ) )
+_f   = chr( int( '22A5', 16 ) )
+_uni = chr( int( '2200', 16 ) )
+_exi = chr( int( '2203', 16 ) )
+_nex = chr( int( '2204', 16 ) )
+_def = chr( int( '2254', 16 ) )
+_prv = chr( int( '22A2', 16 ) )
+_npv = chr( int( '22AC', 16 ) )
+_mod = chr( int( '22A8', 16 ) )
+_nmd = chr( int( '22AD', 16 ) )
+_ctf = chr( int( '25A1', 16 ) ) + _imp
 
-_phi  = chr( int( '1D719', 16) )
-_vphi = chr( int( '1D711', 16) )
-_pi   = chr( int( '1D6F1', 16) )
-_beta = chr( int( '1D6FD', 16) )
+_phi  = chr( int( '1D719', 16 ) )
+_vphi = chr( int( '1D711', 16 ) )
+_pi   = chr( int( '1D6F1', 16 ) )
+_beta = chr( int( '1D6FD', 16 ) )
 
 _sym    = namedtuple( 'symbols', [ 'land', 'lor', 'lnot', 'implies', 'iff', 'xor', 'domain', 'defi', 'true', 'false', 'universal', 'existential',
                                    'not_existential', 'proves', 'not_proves', 'models', 'not_models', 'counterfactual', 'phi', 'vphi', 'pi', 'beta' ] )
@@ -204,6 +239,12 @@ symbols = _sym( land = _and, lor = _or, lnot = _not, xor = _xor,
 #
 # todos: add more + handle error cases
 
+
+####
+# Equal
+#
+# define equality
+#
 def Equal( *args ):
     args, sargs = _type_resolve( args )
 
@@ -213,6 +254,11 @@ def Equal( *args ):
     return eqn
 
 
+####
+# Equal
+#
+# define conjunction
+#
 def And( *args ):
     args, sargs = _type_resolve( args )
 
@@ -222,6 +268,11 @@ def And( *args ):
     return eqn
 
 
+####
+# Equal
+#
+# define disjunction
+#
 def Or( *args ):
     args, sargs = _type_resolve( args )
 
@@ -231,6 +282,11 @@ def Or( *args ):
     return eqn
 
 
+####
+# Equal
+#
+# define negation
+#
 def Not( *args ):
     args, sargs = _type_resolve( args )
 
@@ -244,7 +300,13 @@ def Not( *args ):
 ##### END WRAPPERS ######
 
 
+####
+# Soid
+#
+# class used to define a soid query
+#
 class Soid():
+
 
     def __init__( self, query_name, query_type, priority = float( 'inf' ), expect = True, skip = False ):
 
@@ -265,29 +327,45 @@ class Soid():
         }
 
 
+    ####
+    # __oracle
+    #
+    # gives query access to the oracle that will be used to discharge it,
+    # which is then used so that it can set some variables as appropriate
+    #
     def __oracle( self, oracle ):
         self.oracle = oracle
 
 
-    def __varset( self, vdict ):
+    ####
+    # __varset
+    #
+    # loads variables from declaration into named tuple
+    #
+    def __varset( self, vdict, ty ):
         vs  = list( vdict.keys() )
         svs = [ vdict[ v ] for v in vs ]  # vs.values() would _probably_ work here, but to be safe
 
-        ety = namedtuple( 'E', vs )
+        ety = namedtuple( ty, vs )
         return ety( *svs )
 
 
+    ####
+    # __reg_decl
+    #
+    # decorator whose inner loads declared variables into z3Py and gives to oracle
+    #
     def __reg_decl( self, f ):
 
         def __inner( *args, **kwargs ):
 
             E, S, P = f( *args, **kwargs )
             if E:
-                self.oracle.E = self.__varset( E )
+                self.oracle.E = self.__varset( E, 'E' )
             if S:
-                self.oracle.S = self.__varset( S )
+                self.oracle.S = self.__varset( S, 'S' )
             if P:
-                self.oracle.P = self.__varset( P )
+                self.oracle.P = self.__varset( P, 'P' )
 
             self.__Eext = None
             self.__Sext = None
@@ -295,12 +373,14 @@ class Soid():
             for var in self.oracle.E:
                 if var.soid_base == 'bool':
                     varg, _ = _type_resolve( ( var, ) )
+                    # since bools get turned into (Array (_ BitVec 32) (_ BitVec 8)), constrain them to either 0 or 1
                     const = Or( Equal( varg[ 0 ], cbools[ 0 ] ), Equal( varg[ 0 ], cbools[ 1 ] ) )
                     self.__Eext = And( self.__Eext, const ) if self.__Eext != None else const
 
             for var in self.oracle.S:
                 if var.soid_base == 'bool':
                     varg, _ = _type_resolve( ( var, ) )
+                    # since bools get turned into (Array (_ BitVec 32) (_ BitVec 8)), constrain them to either 0 or 1
                     const = Or( Equal( varg[ 0 ], cbools[ 0 ] ), Equal( varg[ 0 ], cbools[ 1 ] ) )
                     self.__Sext = And( self.__Sext, const ) if self.__Sext != None else const
 
@@ -309,6 +389,11 @@ class Soid():
         self.__declare = __inner
 
 
+    ####
+    # __reg_desc
+    #
+    # decorator whose inner loads query description
+    #
     def __reg_desc( self, f ):
         def __inner( *args, **kwargs ):
             return f( *args, **kwargs )
@@ -316,6 +401,11 @@ class Soid():
         self.__descriptor = __inner
 
 
+    ####
+    # __reg_env
+    #
+    # decorator whose inner loads query environmental constraints
+    #
     def __reg_env( self, f ):
         def __inner( *args, **kwargs ):
             eqn = f( *args, **kwargs )
@@ -332,6 +422,11 @@ class Soid():
         self.__environmental = __inner
 
 
+    ####
+    # __reg_st
+    #
+    # decorator whose inner loads query state constraints
+    #
     def __reg_st( self, f ):
         def __inner( *args, **kwargs ):
             eqn = f( *args, **kwargs )
@@ -345,6 +440,11 @@ class Soid():
         self.__state = __inner
 
 
+    ####
+    # __reg_bhv
+    #
+    # decorator whose inner loads query behavior constraints
+    #
     def __reg_bhv( self, f ):
         def __inner( *args, **kwargs ):
             eqn = f( *args, **kwargs )
@@ -360,17 +460,47 @@ class Soid():
     ##### USER METHODS #####
     ########################
 
-    def register( self, f ):
-        self.__regmap[ f.__name__ ]( f )
 
+    ####
+    # register
+    #
+    # register arbitrary function (uses name to determine type)
+    #
+    def register( self, f ):
+        self.__regmap[ f.__name__ ]( f ) # todo: handle error case
+
+
+    ####
+    # description
+    #
+    # register description function
+    #
     def description( self, f ):
         self.__reg_desc( f )
 
+
+    ####
+    # environmental
+    #
+    # register environmental constraints function
+    #
     def environmental( self, f ):
         self.__reg_env( f )
 
+
+    ####
+    # state
+    #
+    # register state constraints function
+    #
     def state( self, f ):
         self.__reg_st( f )
 
+
+    ####
+    # behavior
+    #
+    # register behavior constraints function
+    #
     def behavior( self, f ):
         self.__reg_bhv( f )
