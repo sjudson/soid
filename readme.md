@@ -24,6 +24,7 @@ $ sudo apt-get install build-essential \
                        doxygen \
                        python3 \
                        python3-pip \
+                       python3-dev \
                        virtualenv \
                        gcc-multilib \
                        g++-multilib \
@@ -32,7 +33,13 @@ $ sudo apt-get install build-essential \
                        llvm-9 \
                        llvm-9-dev \
                        llvm-9-tools \
-                       m4
+                       m4 \
+                       bison \
+                       flex \
+                       bc \
+                       libboost-dev \
+                       unzip \
+                       
 ```
 or on MacOS, with [Homebrew](https://brew.sh/) installed
 ```shell
