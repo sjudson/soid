@@ -126,7 +126,7 @@ cd ../..
 
 # cvc5 and python bindings
 cd ./cvc5
-./configure.sh --python-bindings --auto-download
+./configure.sh --python-bindings --auto-download -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())")  -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))")
 cd ./build
 make
 cd ./src/api/python

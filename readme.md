@@ -31,7 +31,8 @@ $ sudo apt-get install build-essential \
                        clang-9 \
                        llvm-9 \
                        llvm-9-dev \
-                       llvm-9-tools
+                       llvm-9-tools \
+                       m4
 ```
 or on MacOS, with [Homebrew](https://brew.sh/) installed
 ```shell
