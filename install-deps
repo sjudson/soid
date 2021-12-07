@@ -121,7 +121,7 @@ else
         $ksip
 fi
 
-make
+make -j2
 cd ../..
 
 # cvc5 and python bindings
@@ -131,6 +131,58 @@ cd ./build
 make
 cd ./src/api/python
 python setup.py install
+
+cd ../../../..
+
+#llvm3.4 for klee-float
+
+py2="($which python2)"
+
+cd ./llvm-project
+llvmip="($pwd)"
+
+git reset --hard d13f57a1a1a1cc23c97bf5b99b89f28f8b8c1149 # release 3.4
+git clean -fdx
+mkdir ./build
+mkdir ./release
+mv ./clang ./llvm/tools
+mv ./clang-tools-extra ./llvm/tools/clang/tools
+cd ./build
+
+../llvm/configure --prefix=$llvmip/release --with-python=py2 --enable-cxx11
+make -j2
+make install
+
+cd ../..
+
+#klee-float
+
+cd ./klee-float
+kfsip="$(pwd)"
+cd ..
+
+if [ -d './klee-float/build' ]
+then
+    rm -rf ./klee-float/build
+fi
+mkdir ./klee-float/build
+
+cd ./klee-float/build
+cmake \
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    -DENABLE_KLEE_ASSERTS=ON \
+    -DENABLE_KLEE_UCLIBC=ON \
+    -DKLEE_UCLIBC_PATH=$ksucip \
+    -DENABLE_POSIX_RUNTIME=OFF \
+    -DENABLE_SOLVER_Z3=ON \
+    -DENABLE_TCMALLOC=OFF \
+    -DLLVM_CONFIG_BINARY=$llvmip/release/bin/llvm-config \
+    -DLLVMCC=$llvmip/release/bin/clang \
+    -DLLVMCXX=$llvmip/release/bin/clang++ \
+    -DENABLE_UNIT_TESTS=OFF \
+    -DENABLE_SYSTEM_TESTS=OFF \
+    $kfsip
+
+make -j2
+
 deactivate
-
-

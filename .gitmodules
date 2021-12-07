@@ -13,3 +13,6 @@
 [submodule "cvc5"]
 	path = cvc5
 	url = git@github.com:cvc5/cvc5.git
+[submodule "llvm-project"]
+	path = llvm-project
+	url = git@github.com:llvm/llvm-project.git

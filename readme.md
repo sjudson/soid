@@ -15,8 +15,7 @@ $ sudo apt-get install build-essential \
                        git \
                        cmake \
                        libncurses5-dev \
-                       python-minimal \
-                       python-pip \
+                       python2-minimal \
                        unzip \
                        libtcmalloc-minimal4 \
                        libgoogle-perftools-dev \
