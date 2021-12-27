@@ -21,9 +21,11 @@ int main( int argc, char** argv ) {
   klee_assume( instance[ 5 ] == 1.0f ); // workingday
   klee_assume( instance[ 6 ] == 0.0f ); // misty
   klee_assume( instance[ 7 ] == 0.0f ); // rain/snow
-  klee_assume( -3.88889 <= instance[ 8 ] && instance[ 8 ] <= 10.0f  ); // temperature
+  klee_assume( instance[ 8 ] == 1.604346f ); // temperature
+  //klee_assume( -3.88889 <= instance[ 8 ] && instance[ 8 ] <= 10.0f  ); // temperature
   klee_assume( instance[ 9 ] == 51.8261f ); // humidity
-  klee_assume( 0.0f <= instance[ 10 ] && instance[ 10 ] <= 10.0f ); // windspeed
+  klee_assume( instance[ 10 ] == 6.000868f ); // windspeed
+  //klee_assume( 0.0f <= instance[ 10 ] && instance[ 10 ] <= 10.0f ); // windspeed
   klee_assume( instance[ 11 ] == 5.0f );
 
   double proj = 0.0f;

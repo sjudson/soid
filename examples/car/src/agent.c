@@ -2196,13 +2196,13 @@ int main(int argc, char** argv) {
 
   klee_assume( ictx.locs[2][1] == 1 );    // Occupied
   klee_assume( ictx.orients[2][1] == 1 );  // East
-  //klee_assume( ictx.sigs[2][1][0] == 0 ); // Left Signal
-  //klee_assume( ictx.sigs[2][1][1] == 1 ); // Right Signal
-  
-  klee_assume( ictx.sigs[2][1][0] == 0 || ictx.sigs[2][1][0] == 1 );
-  klee_assume( ictx.sigs[2][1][1] == 0 || ictx.sigs[2][1][1] == 1 );
-  klee_assume( !(ictx.sigs[2][1][1] == 1 && ictx.sigs[2][1][1] == 1) );
-  
+  klee_assume( ictx.sigs[2][1][0] == 0 ); // Left Signal
+  klee_assume( ictx.sigs[2][1][1] == 1 ); // Right Signal
+
+  //klee_assume( ictx.sigs[2][1][0] == 0 || ictx.sigs[2][1][0] == 1 );
+  //klee_assume( ictx.sigs[2][1][1] == 0 || ictx.sigs[2][1][1] == 1 );
+  //klee_assume( !(ictx.sigs[2][1][1] == 1 && ictx.sigs[2][1][1] == 1) );
+
   klee_assume( ictx.locs[2][2] == 0 );    // Empty
   klee_assume( ictx.orients[2][2] == 0 );  // North
   klee_assume( ictx.sigs[2][2][0] == 0 ); // Left Signal
@@ -2232,6 +2232,10 @@ int main(int argc, char** argv) {
   klee_assume( ictx.orients[3][3] == 0 );  // North
   klee_assume( ictx.sigs[3][3][0] == 0 ); // Left Signal
   klee_assume( ictx.sigs[3][3][1] == 0 ); // Right Signal
+
+  d.mov = 0;
+  d.row = 7;
+  d.col = 6;
   
   imove( &l, &nctx, &ictx, &d );
 
