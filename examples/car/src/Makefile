@@ -24,7 +24,8 @@ symbolic:
 	$(cc) -Dsymbolic -I $(SOIDLIB) -I $(KLEE) -emit-llvm -c -g -O0 ./util.c -o $(BC5)
 	$(cc) -Dsymbolic -I $(SOIDLIB) -I $(KLEE) -emit-llvm -c -g -O0 ./agent.c -o $(BC6)
 	$(link) $(BC1) $(BC2) $(BC3) $(BC4) $(BC5) $(BC6) -o $(BC)
-	$(KEXEC) -silent-klee-assume -write-smt2s $(BC)
+#	$(KEXEC) -silent-klee-assume -write-smt2s -debug-print-instructions=all:stderr $(BC)
+	$(KEXEC) -silent-klee-assume -write-smt2s -use-query-log=all:smt2 $(BC)
 
 clean:
 	rm -f ./inter*.bc

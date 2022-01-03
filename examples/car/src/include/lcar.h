@@ -12,7 +12,7 @@ typedef struct Path {
 
 Car* create_ego_car(unsigned int id, int row, int col, CardinalDirection from, CardinalDirection to, Learn *l);
 
-void imove( Learn *l, NavCtx *nctx, IntCtx *ictx, Decision *d );
+unsigned int imove( Learn *l, NavCtx *nctx, IntCtx *ictx, Decision *d );
 
 void move_ego(Car* car, IntCtx *ictx);
 

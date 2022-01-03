@@ -22,7 +22,6 @@ typedef struct IntCtx {
 } IntCtx;
 
 typedef struct Decision {
-  int mov;
   int row;
   int col;
 } Decision;

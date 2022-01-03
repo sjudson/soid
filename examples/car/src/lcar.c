@@ -323,7 +323,7 @@ void get_features( double fv[FEATURES+1], NavCtx *nctx, IntCtx *ictx ) {
   return;
 }
 
-void imove( Learn *l, NavCtx *nctx, IntCtx *ictx, Decision *d ) {
+unsigned int imove( Learn *l, NavCtx *nctx, IntCtx *ictx, Decision *d ) {
 
   int delta_row = 0;
   int delta_col = 0;
@@ -354,17 +354,18 @@ void imove( Learn *l, NavCtx *nctx, IntCtx *ictx, Decision *d ) {
     get_features( l->fv, nctx, ictx );
     update(l, 0);
 
+    unsigned int m;
+
     // random
     if (l->learn && rand_0_1() <= l->epsilon) {
-      unsigned int m = (rand_0_1() <= 0.5);
+      m = (rand_0_1() <= 0.5);
 
       if (m) { // pick randomly between moving and not
         d->row = new_row;
         d->col = new_col;
-        d->mov = 1;
       }
 
-      return;
+      return m;
     }
 
     double ls0 = dot(l->lmodel->ws[0], l->fv);
@@ -376,13 +377,13 @@ void imove( Learn *l, NavCtx *nctx, IntCtx *ictx, Decision *d ) {
     unsigned int guard = (l->profile == 0) ? ss0 >= ss1 : (ls0 >= ls1 || ss0 >= ss1);
 
     // add a simple shield that disables entering the intersection if it is full
-    if ((ls0 >= ls1 || ss0 >= ss1) && !full_intersection(ictx)) {
+    m = guard && !full_intersection(ictx);
+    if (m) {
       d->row = new_row;
       d->col = new_col;
-      d->mov = 1;
     }
 
-    return;
+    return m;
   }
 
   // outside intersection
@@ -390,15 +391,14 @@ void imove( Learn *l, NavCtx *nctx, IntCtx *ictx, Decision *d ) {
       is_occupied(new_row, new_col)==0) {                       // if outside where we're going is empty move up
     d->row = new_row;
     d->col = new_col;
-    d->mov = 1;
 
-    return;
+    return 1;
   }
 
   int proj_row = new_row;
   int proj_col = new_col;
   while (1) {                                                   // and otherwise move forward unless there's no empty space between here and the intersection
-    if (is_at_stop_line(nctx->from, proj_row, proj_col)) return;
+    if (is_at_stop_line(nctx->from, proj_row, proj_col)) return 0;
 
     proj_row += next_row(nctx->curr_direction);
     proj_col += next_col(nctx->curr_direction);
@@ -406,11 +406,10 @@ void imove( Learn *l, NavCtx *nctx, IntCtx *ictx, Decision *d ) {
     if (is_occupied(proj_row, proj_col)==0 ||
         is_out_of_boundary(proj_row, proj_col)) break;
   }
-  nctx->row = new_row;
-  nctx->col = new_col;
-  d->mov = 1;
+  d->row = new_row;
+  d->col = new_col;
 
-  return;
+  return 1;
 }
 
 void move_ego(Car* car, IntCtx *ictx) {
@@ -420,7 +419,6 @@ void move_ego(Car* car, IntCtx *ictx) {
   NavCtx nctx;
   Decision d;
 
-  d.mov = 0;
   d.row = car->row;
   d.col = car->col;
 
@@ -432,13 +430,13 @@ void move_ego(Car* car, IntCtx *ictx) {
   nctx.needs_turn = car->needs_turn;
   nctx.has_turned = car->has_turned;
 
-  imove(car->l, &nctx, ictx, &d);
+  unsigned int moved = imove(car->l, &nctx, ictx, &d);
 
-  if (d.mov) {
+  if (moved) {
     car->row = d.row;
     car->col = d.col;
   }
-  car->l->prev_action = !(d.mov); // cause 0->move and 1->do not move
+  car->l->prev_action = !(moved); // cause 0->move and 1->do not move
 
   // for scenario symbolic execution printing:
   size_t i, j, k;
@@ -464,7 +462,6 @@ void move_ego(Car* car, IntCtx *ictx) {
   }
 
   if (car->l->l_decision != NULL) {
-    car->l->l_decision->mov = d.mov;
     car->l->l_decision->row = d.row;
     car->l->l_decision->col = d.col;
   }
