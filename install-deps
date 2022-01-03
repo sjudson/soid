@@ -128,7 +128,7 @@ cd ../..
 cd ./cvc5
 ./configure.sh --python-bindings --auto-download -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())")  -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))")
 cd ./build
-make
+make -j2
 cd ./src/api/python
 python setup.py install
 
@@ -136,10 +136,8 @@ cd ../../../..
 
 #llvm3.4 for klee-float
 
-py2="($which python2)"
-
 cd ./llvm-project
-llvmip="($pwd)"
+llvmip="$(pwd)"
 
 git reset --hard d13f57a1a1a1cc23c97bf5b99b89f28f8b8c1149 # release 3.4
 git clean -fdx
