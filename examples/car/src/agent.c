@@ -2201,7 +2201,7 @@ int main(int argc, char** argv) {
   //klee_assume( ictx.sigs[2][1][1] == 1 ); // Right Signal
   klee_assume( ictx.sigs[2][1][0] == 0 || ictx.sigs[2][1][0] == 1 );
   klee_assume( ictx.sigs[2][1][1] == 0 || ictx.sigs[2][1][1] == 1 );
-  klee_assume( !(ictx.sigs[2][1][1] == 0 && ictx.sigs[2][1][1] == 1) );
+  klee_assume( !(ictx.sigs[2][1][0] == 1 && ictx.sigs[2][1][1] == 1) );
 
   klee_assume( ictx.locs[2][2] == 0 );    // Empty
   klee_assume( ictx.orients[2][2] == 0 ); // North
