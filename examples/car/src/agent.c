@@ -2233,8 +2233,8 @@ int main(int argc, char** argv) {
   klee_assume( ictx.sigs[3][3][0] == 0 ); // Left Signal
   klee_assume( ictx.sigs[3][3][1] == 0 ); // Right Signal
 
-  d.row = 7;
-  d.col = 6;
+  d.row = nctx.row;
+  d.col = nctx.col;
 
   m = imove( &l, &nctx, &ictx, &d );
 
