@@ -23,6 +23,7 @@ int main(int argc, char** argv) {
   klee_make_symbolic( &ictx, sizeof(ictx), "ictx" );
 
   klee_make_symbolic( &__soid__d, sizeof(__soid__d), "__soid__d" );
+  klee_make_symbolic( &__soid__m, sizeof(__soid__m), "__soid__m" );
 
   l.mrow = 320;
   l.learn = 0;
