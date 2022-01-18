@@ -38,10 +38,10 @@ def environmental( E ):
                 And( Equal( E.occupied_2_1, False ) ),
 
                 Equal( E.occupied_2_2,  True ),
-                Or( And( Equal( E.oriented_2_1, cardinalIDs[ 'East' ] ),
-                         Or( And( Equal( E.leftsignal_2_1, False ), Equal( E.rightsignal_2_1, False ) ),     # heading straight east
-                             And( Equal( E.leftsignal_2_1,  True ), Equal( E.rightsignal_2_1, False ) ) ) ), # heading east to turn north
-                    Equal( E.oriented_2_1, cardinalIDs[ 'North' ] ) ),                                       # heading north, with all three path options available
+                Or( And( Equal( E.oriented_2_2, cardinalIDs[ 'East' ] ),
+                         Or( And( Equal( E.leftsignal_2_2, False ), Equal( E.rightsignal_2_2, False ) ),     # heading straight east
+                             And( Equal( E.leftsignal_2_2,  True ), Equal( E.rightsignal_2_2, False ) ) ) ), # heading east to turn north
+                    Equal( E.oriented_2_2, cardinalIDs[ 'North' ] ) ),                                       # heading north, with all three path options available
 
                 And( Equal( E.occupied_2_3, False ) ),
                 And( Equal( E.occupied_3_0, False ) ),
