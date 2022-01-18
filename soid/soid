@@ -179,21 +179,30 @@ class Oracle():
     #
     def build_pi( self ):
 
+        def create( p ):
+            if p.soid_isbv:
+                v = soidlib.types.util.bv32bv( '__soid__' + str( p ) )
+                setattr( v, 'soid_isbv', True )
+                return v
+
+            v = soidlib.types.util.bv32arr( '__soid__' + str( p ) )
+            setattr( v, 'soid_isbv', False )
+            return v
+
+        symbls = [ create( p ) for p in self.P ]
+
+        def cast( i, p ):
+            if p.soid_isbv:
+                return ( p == symbls[ i ] )
+            return soidlib.types.util.bv32arr_to_bv32( p ) == soidlib.types.util.bv32arr_to_bv32( symbls[ i ] )
+
+        amends = [ cast( i, p ) for i, p in enumerate( self.P ) ]
+
         varset = set()
         for path in self.paths:
             for v in z3.z3util.get_vars( path ):
                 varset.add( v )
         varlist = list( varset )
-
-        def create( p ):
-            if p.soid_isbv:
-                return True
-            return soidlib.types.util.bv32arr( '__soid__' + str( p ) )
-
-        def cast( i, p ):
-            if p.soid_isbv:
-                return True
-            return soidlib.types.util.bv32arr_to_bv32( p ) == soidlib.types.util.bv32arr_to_bv32( symbls[ i ] )
 
         def bind( v ):
             if not v.soid_isbv:
@@ -205,10 +214,7 @@ class Oracle():
 
             return True
 
-        symbls  = [ create( p ) for p in self.P ]
-        amends  = [ cast( i, p ) for i, p in enumerate( self.P ) ]
-        amends += [ bind( e ) for e in self.E ] + [ bind( s ) for s in self.S ] + [ bind( p ) for p in self.P ]
-
+        amends += [ bind( e ) for e in self.E ] + [ bind( s ) for s in self.S ] + [ bind( p ) for p in self.P ] + [ bind( s ) for s in symbls ]
         amended = [ z3.And( [ path ] + amends ) for path in self.paths ]
 
         def __inner():

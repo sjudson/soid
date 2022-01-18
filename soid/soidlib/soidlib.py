@@ -338,12 +338,12 @@ class Decl():
     def __next__( self ):
         if self.__soid__iter__i  == len( self.__soid__iter__itms ):
             raise StopIteration
-        
+
         nxt = getattr( self, self.__soid__iter__itms[ self.__soid__iter__i ] )
         self.__soid__iter__i += 1
 
         return nxt
-    
+
 
 ####
 # Soid
@@ -390,7 +390,7 @@ class Soid():
     def __varset( self, vdict, decl ):
         vs  = list( vdict.keys() )
         svs = [ vdict[ v ] for v in vs ]  # vs.values() would _probably_ work here, but to be safe
-
+        
         for i, v in enumerate( vs ):
             setattr( decl, v, svs[ i ] )
         return decl

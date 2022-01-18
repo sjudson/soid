@@ -25,8 +25,8 @@ def declare():
           'needs_turn'     : soidlib.types.bool_bv( 'needs_turn',     pp = None,      raw = None ),
           'has_turned'     : soidlib.types.bool_bv( 'has_turned',     pp = None,      raw = None ) }
 
-    P = { 'row'  : soidlib.types.u32_bv(  'row',   pp = None, raw = '__soid__row' ),
-          'col'  : soidlib.types.u32_bv(  'col',   pp = None, raw = '__soid__col' ),
-          'move' : soidlib.types.bool_bv( 'move',  pp = None, raw = '__soid__m' ) }
+    P = { 'new_row'  : soidlib.types.u32_bv(  'new_row',   pp = None, raw = None ),
+          'new_col'  : soidlib.types.u32_bv(  'new_col',   pp = None, raw = None ),
+          'move'     : soidlib.types.bool_bv( 'move',      pp = None, raw = 'm' ) }
 
     return E, S, P

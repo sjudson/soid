@@ -11,8 +11,11 @@ int main(int argc, char** argv) {
   Learn l;
   NavCtx nctx;
   IntCtx ictx;
-  Decision d, __soid__d;
+  Decision d;
+
   unsigned int m, __soid__m;
+  unsigned int new_row, __soid__new_row;
+  unsigned int new_col, __soid__new_col;
 
   LApprox la;
   l.lmodel = &la;
@@ -20,8 +23,9 @@ int main(int argc, char** argv) {
   QTable qt;
   l.smodel = &qt;
 
-  klee_make_symbolic( &__soid__d, sizeof(__soid__d), "__soid__d" );
   klee_make_symbolic( &__soid__m, sizeof(__soid__m), "__soid__m" );
+  klee_make_symbolic( &__soid__new_row, sizeof(__soid__new_row), "__soid__new_row" );
+  klee_make_symbolic( &__soid__new_col, sizeof(__soid__new_col), "__soid__new_col" );
 
   l.mrow = 320;
   l.learn = 0;
@@ -2341,11 +2345,8 @@ int main(int argc, char** argv) {
 
   klee_assume( locs21 == 1 );    // Occupied
   klee_assume( orients21 == 1 ); // East
-  //klee_assume( sigs210 == 0 ); // Left Signal
-  //klee_assume( sigs211 == 1 ); // Right Signal
-  klee_assume( sigs210 == 0 || sigs210 == 1 );
-  klee_assume( sigs211 == 0 || sigs211 == 1 );
-  klee_assume( !(sigs210 == 1 && sigs211 == 1) );
+  klee_assume( sigs210 == 0 ); // Left Signal
+  klee_assume( sigs211 == 1 ); // Right Signal
 
   memcpy( &ictx.locs[2][1], &locs21, sizeof(int) );
   memcpy( &ictx.orients[2][1], &orients21, sizeof(CardinalDirection) );
@@ -2467,9 +2468,12 @@ int main(int argc, char** argv) {
 
   m = imove( &l, &nctx, &ictx, &d );
 
-  klee_assume(     m == __soid__m );
-  klee_assume( d.row == __soid__d.row );
-  klee_assume( d.col == __soid__d.col );
+  new_row = d.row;
+  new_col = d.col;
+
+  klee_assume(       m == __soid__m );
+  klee_assume( new_row == __soid__new_row );
+  klee_assume( new_col == __soid__new_col );
 
   return 0;
 };
