@@ -10,7 +10,19 @@ soid.register( declare )
 def descriptor():
     return (
         f'\n\tquestion: If we do not specify how the other car signaled, can we generate a counterfactual where the ego car does'
-        f'\n\t          not enter the intersection?                                                                             ' 
+        f'\n\t          not enter the intersection?                                                                             '
+        f'\n\t                                                                                                                  '
+        f'\n\t                    ***  |  ***                                                                                   '
+        f'\n\t                    ***  |  ***                                                                                   '
+        f'\n\t                   ------|------                                                                                  '
+        f'\n\t         ***  *** | ***  |  *** | ***  ***                                                                        '
+        f'\n\t         ----------------|----------------                                                                        '
+        f'\n\t         ***  *** | c>?  |  *** | ***  ***                                                                        '
+        f'\n\t                   ------|------                                                                                  '
+        f'\n\t                    ***  |  e^s                                                                                   '
+        f'\n\t                    ***  |  ***                                                                                   '
+        f'\n\t                                                                                                                  '
+
     )
 
 

@@ -35,7 +35,7 @@ def environmental( E ):
                 And( Equal( E.occupied_1_2, False ) ),
                 And( Equal( E.occupied_1_3, False ) ),
 
-                And( Equal( E.occupied_2_0,  True ), Equal( E.oriented_2_1, cardinalIDs[ 'East' ] ) ),
+                And( Equal( E.occupied_2_0,  True ), Equal( E.oriented_2_0, cardinalIDs[ 'East' ] ) ),
 
                 And( Equal( E.occupied_2_1, False ) ),
                 And( Equal( E.occupied_2_2, False ) ),
