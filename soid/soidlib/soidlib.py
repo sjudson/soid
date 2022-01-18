@@ -90,6 +90,7 @@ def _bv32( decl, as_bv = False ):
                     var = _cbool_to_bv32( val )                        # named constant
                 else:
                     var = _bv32bv( rv ) if as_bv else _bv32arr( rv )   # named variable
+                setattr( var, 'soid_pp', str( v ) )
                 setattr( var, 'soid_base', 'bool' )
                 setattr( var, 'soid_isbv', as_bv )
 
@@ -99,9 +100,9 @@ def _bv32( decl, as_bv = False ):
 
             elif isinstance( v, bool ):                                # anonymous constant
                 var = _cbool_to_bv32( v )
+                setattr( var, 'soid_pp', str( v ) )
                 setattr( var, 'soid_base', 'bool' )
                 setattr( var, 'soid_isbv', as_bv )
-                setattr( var, 'soid_pp', str( v ) )
 
                 if pp:
                     setattr( var, 'soid_val_pp', pp )
@@ -130,9 +131,9 @@ def _bv32( decl, as_bv = False ):
 
             elif isinstance( v, bool ):                               # anonymous constant
                 var = _cint_to_bv32( v )
+                setattr( var, 'soid_pp', str( v ) )
                 setattr( var, 'soid_base', 'u32' )
                 setattr( var, 'soid_isbv', as_bv )
-                setattr( var, 'soid_pp', str( v ) )
 
                 if pp:
                     setattr( var, 'soid_val_pp', pp )
@@ -179,6 +180,14 @@ def _type_resolve( args ):
         elif isinstance( arg, z3.z3.BoolRef ):
             if hasattr( arg, 'soid_pp' ):
                 sargs[ i ] = arg.soid_pp
+
+        elif isinstance( arg, z3.z3.BitVecRef ):
+
+            if hasattr( arg, 'soid_pp' ):
+                sargs[ i ] = arg.soid_pp
+
+            if hasattr( arg, 'soid_val_pp' ):
+                pretty = arg.soid_val_pp
 
         elif isinstance( arg, z3.z3.ArrayRef ):
             largs[ i ] = _bv32arr_to_bv32( arg )
@@ -390,7 +399,7 @@ class Soid():
     def __varset( self, vdict, decl ):
         vs  = list( vdict.keys() )
         svs = [ vdict[ v ] for v in vs ]  # vs.values() would _probably_ work here, but to be safe
-        
+
         for i, v in enumerate( vs ):
             setattr( decl, v, svs[ i ] )
         return decl

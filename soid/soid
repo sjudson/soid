@@ -770,6 +770,9 @@ class Oracle():
                 elif z3.is_store( expr.children()[ 0 ] ) and isinstance( expr.children()[ 2 ], z3.BitVecNumRef ):
                     return ( expr.children()[ 2 ].as_long() << tier ) + self.model_recurse( expr.children()[ 0 ], tier - 1 )
 
+        elif z3.is_bv( expr ):
+            return expr.as_long()
+
     ####
     # model_pp
     #
@@ -777,13 +780,18 @@ class Oracle():
     #
     def model_pp( self, model ):
         vs = [ d for d in model.decls() if '__soid__' not in d.name() ]
-        nl = max( [ len( d.name() ) for d in vs ] )
 
+        names = []
         for v in vs:
             val   = self.model_recurse( model[ v ] )
 
-            ref   = [ vr for vr in ( self.E + self.S + self.P ) if str( vr ) == v.name() ].pop()
+            # sometimes there are other vars that aren't in the decls, e.g., xxx_ackermann!xx, so ignore them
+            try:
+                ref = ([ vr for vr in self.E if str( vr ) == v.name() ] + [ vr for vr in self.S if str( vr ) == v.name() ] + [ vr for vr in self.P if str( vr ) == v.name() ] ).pop()
+            except:
+                continue
             btype = ref.soid_base
+            name  = v.name()
 
             if btype == 'bool':
                 val = soidlib.symbols.true if val == 1 else soidlib.symbols.false
@@ -791,11 +799,17 @@ class Oracle():
             if btype == 'u32':
                 val = str( val )
 
-            name = v.name().rjust( nl )
+            if hasattr( ref, 'soid_pp' ):
+                name = ref.soid_pp
+
             if hasattr( ref, 'soid_val_pp' ) and val in ref.soid_val_pp:
                 val = ref.soid_val_pp[ val ]
 
-            print( f'\n\t                 {name}. {val}' )
+            names.append((name, val))
+
+        nl = max( [ len( name[0] ) for name in names ] )
+        for (name, val) in names:
+            print( f'\n\t                 {name.rjust( nl )}. {val}' )
 
         return
 
@@ -971,7 +985,7 @@ class Oracle():
         for var in list( self.E ) + list( self.S ) + list( self.P ):
             model.eval( var, model_completion = True )
 
-        return self.scf_pp( unsat )
+        return self.scf_pp( unsat, model )
 
 
     ####
