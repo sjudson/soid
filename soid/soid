@@ -7,6 +7,7 @@ import soidlib
 
 import os
 import os.path
+import re
 import sys
 import argparse
 import subprocess
@@ -69,7 +70,7 @@ class Oracle():
 
 
     ####
-    # ld_env
+    # ld_st
     #
     # loads state constraints registered through soidlib
     #
@@ -121,7 +122,7 @@ class Oracle():
 
 
     ####
-    # ld_bhv
+    # ld_agnt
     #
     # invokes KLEE to load agent constraints
     #
@@ -150,7 +151,14 @@ class Oracle():
             fs.append( fn )
             i += 1
 
-        paths = [ z3.parse_smt2_file( f )[ 0 ] for f in fs ]
+        paths = []
+        for f in fs:
+            path_components = z3.parse_smt2_file( f )
+            if len( path_components ) == 1:
+                paths.append( path_components[ 0 ] )
+                break
+
+            paths.append( z3.And( *path_components ) )
 
         print( '\n\n##################\n## CLEANING KLEE #\n##################\n\n' )
 
@@ -171,8 +179,35 @@ class Oracle():
     #
     def build_pi( self ):
 
-        symbls  = [ soidlib.types.util.bv32arr( '__soid__' + str( p ) ) for p in self.P ]
-        amends  = [ soidlib.types.util.bv32arr_to_bv32( p ) == soidlib.types.util.bv32arr_to_bv32( symbls[ i ] ) for i, p in enumerate( self.P ) ]
+        varset = set()
+        for path in self.paths:
+            for v in z3.z3util.get_vars( path ):
+                varset.add( v )
+        varlist = list( varset )
+
+        def create( p ):
+            if p.soid_isbv:
+                return True
+            return soidlib.types.util.bv32arr( '__soid__' + str( p ) )
+
+        def cast( i, p ):
+            if p.soid_isbv:
+                return True
+            return soidlib.types.util.bv32arr_to_bv32( p ) == soidlib.types.util.bv32arr_to_bv32( symbls[ i ] )
+
+        def bind( v ):
+            if not v.soid_isbv:
+                return True
+
+            for vl in varlist:
+                if str( v ) == re.sub( r'_ackermann![0-9]+', '', str( vl ) ):
+                    return ( v == vl )
+
+            return True
+
+        symbls  = [ create( p ) for p in self.P ]
+        amends  = [ cast( i, p ) for i, p in enumerate( self.P ) ]
+        amends += [ bind( e ) for e in self.E ] + [ bind( s ) for s in self.S ] + [ bind( p ) for p in self.P ]
 
         amended = [ z3.And( [ path ] + amends ) for path in self.paths ]
 
@@ -895,7 +930,6 @@ class Oracle():
                 z3.Implies(
                     z3.And( self.phi(), self.vphi(), self.pi() ),
                     self.beta() ) ) )
-
 
         unsat = ( self.solver.check() == z3.unsat )
         if unsat:

@@ -183,11 +183,11 @@ void get_state( int* mrow, NavCtx *nctx, IntCtx *ictx ) {
   //           2. intersection is empty
   //           3. square ahead in intersection
   //           4. square ahead occupied
-  //           5. next square of car ahear in intersection
+  //           5. next square of car ahead in intersection
   //           6. next square of car ahead occupied
   //           7. car other than us trying to enter square ahead
-  //           8. car behind and inside the intersection trying to enter the squard
-  //           9. car behind and outside the intersection trying to enter the squard
+  //           8. car behind and inside the intersection trying to enter the square
+  //           9. car behind and outside the intersection trying to enter the square
 
   // 0.
   if (is_intersection(nctx->row, nctx->col))
@@ -224,16 +224,18 @@ void get_state( int* mrow, NavCtx *nctx, IntCtx *ictx ) {
 
     _ = project_path(0, &other_path, get_to(sig, ictx->orients[nrow][ncol], nrow, ncol), ictx->orients[nrow][ncol], nrow, ncol);
 
-    nrow = ego_path.locs[1][0];
-    ncol = ego_path.locs[1][1];
+    nrow = other_path.locs[1][0];
+    ncol = other_path.locs[1][1];
 
-    // 5.
-    if (is_intersection(nrow+4, ncol+4))
-      *mrow += 16;                                                  // ( STATES / 32 * 2 )
+    if (other_path.len > 0) {
+      // 5.
+      if (is_intersection(nrow+4, ncol+4))
+        *mrow += 16;                                                  // ( STATES / 32 * 2 )
 
-    // 6.
-    if (other_path.len > 0 && ictx->locs[nrow][ncol])
-      *mrow += 8;                                                   // ( STATES / 64 * 2 )
+      // 6.
+      if (ictx->locs[nrow][ncol])
+        *mrow += 8;                                                   // ( STATES / 64 * 2 )
+    }
   }
 
   Path ego_stationary;
@@ -251,7 +253,7 @@ void get_state( int* mrow, NavCtx *nctx, IntCtx *ictx ) {
   for (i = 0; i < 4; i++) {
     for (j = 0; j < 4; j++) {
       if (!is_road(i+4, j+4)) continue;
-      if (!ictx->locs[i][j]) continue;
+      if (!ictx->locs[i][j])  continue;
 
       sig = 2;
       for (k = 0; k <= 1; k++) sig -= (k+1) * ictx->sigs[i][j][k];
@@ -374,7 +376,7 @@ unsigned int imove( Learn *l, NavCtx *nctx, IntCtx *ictx, Decision *d ) {
     double ss0 = l->smodel->qt[l->mrow][0];
     double ss1 = l->smodel->qt[l->mrow][1];
 
-    unsigned int guard = (l->profile == 0) ? ss0 >= ss1 : (ls0 >= ls1 || ss0 >= ss1);
+    unsigned int guard = (l->profile == 0) ? ss0 >= ss1 : (ss0 >= ss1 || ls0 >= ls1); 
 
     // add a simple shield that disables entering the intersection if it is full
     m = guard && !full_intersection(ictx);

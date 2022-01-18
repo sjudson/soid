@@ -224,6 +224,17 @@ unsigned int is_intersection_empty() {
         return 0;
 }
 
+unsigned int is_intersection_part_empty(int row, int col) {
+  unsigned int sum = get_map_element(HEIGHT/2, WIDTH/2) + get_map_element(HEIGHT/2-1, WIDTH/2-1) + get_map_element(HEIGHT/2-1, WIDTH/2) + get_map_element(HEIGHT/2, WIDTH/2-1);
+
+  sum -= (get_map_element(row, col) != 0);
+
+  if (sum==0)
+    return 1;
+  else
+    return 0;
+}
+
 void print_status(Learn *l, Car *ego) {
   if (l->rctx.in || l->rctx.exit) {
     printf("\nStatus:\n");
@@ -231,6 +242,7 @@ void print_status(Learn *l, Car *ego) {
     printf("\t\tDone:             %02d\n", l->rctx.done);
     printf("\t\tExited:           %02d\n", l->rctx.exit);
     printf("\t\tMoved:            %02d\n", l->rctx.moved);
+    printf("\t\tRisky:            %02d\n", l->rctx.risky);
     printf("\t\tCrashed:          %02d\n", l->rctx.crash);
     printf("\t\tProportion Moved: %.4f\n", l->rctx.moves);
     printf("\t\tAmount Delayed:   %02d\n", l->rctx.delay);

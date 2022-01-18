@@ -29,13 +29,14 @@ int main( int argc, char** argv ) {
   klee_assume( instance[ 11 ] == 5.0f );
 
   double proj = 0.0f;
-
-  double __soid__proj;
-  klee_make_symbolic( &__soid__proj, sizeof( __soid__proj ), "__soid__proj" );
-
   for ( int i = 0; i < 12; i++ ) proj += model[ i ] * instance[ i ];
 
-  klee_assume( proj == __soid__proj );
+  int __soid__m, m = 0;
+  klee_make_symbolic( &__soid__m, sizeof(__soid__m), "__soid__m" );
+
+  if ( proj >= 1000.0f ) m = 1;
+
+  klee_assume( m == __soid__m );
 
   return 0;
 }

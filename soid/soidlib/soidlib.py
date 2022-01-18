@@ -36,6 +36,15 @@ def _bv32arr( x ):
 
 
 ####
+# _bv32bv
+#
+# convert int variable to (_ BitVec 32)
+#
+def _bv32bv( x ):
+    return z3.BitVec( x, 32 )
+
+
+####
 # _cint_to_bv32arr
 #
 # convert constant int to (Array (_ BitVec 32) (_ BitVec 8))
@@ -70,16 +79,19 @@ def _bv32arr_to_bv32( x ):
 #
 # parse declaration of int or bool and turn into z3 expression
 #
-def _bv32( decl ):
+def _bv32( decl, as_bv = False ):
 
     if decl == 'bool':
-        def __inner( v, val = None, pp = None ):
-            if isinstance( v, str ):
-                var = _cbool_to_bv32( val ) if val else _bv32arr( v )  # named variable
-                setattr( var, 'soid_base', 'bool' )
+        def __inner( v, val = None, pp = None, raw = None ):
+            rv = raw if raw else v
 
-                if val:                                                # named constant
-                    setattr( var, 'soid_pp', v )
+            if isinstance( v, str ):
+                if val:
+                    var = _cbool_to_bv32( val )                        # named constant
+                else:
+                    var = _bv32bv( rv ) if as_bv else _bv32arr( rv )   # named variable
+                setattr( var, 'soid_base', 'bool' )
+                setattr( var, 'soid_isbv', as_bv )
 
                 if pp:
                     setattr( var, 'soid_val_pp', pp )
@@ -88,6 +100,7 @@ def _bv32( decl ):
             elif isinstance( v, bool ):                                # anonymous constant
                 var = _cbool_to_bv32( v )
                 setattr( var, 'soid_base', 'bool' )
+                setattr( var, 'soid_isbv', as_bv )
                 setattr( var, 'soid_pp', str( v ) )
 
                 if pp:
@@ -99,13 +112,17 @@ def _bv32( decl ):
         return __inner
 
     if decl == 'int' or decl == 'u32':
-        def __inner( v, val = None, pp = None ):
-            if isinstance( v, str ):
-                var = _cint_to_bv32( val ) if val else _bv32arr( v )  # named variable
-                setattr( var, 'soid_base', 'u32' )
+        def __inner( v, val = None, pp = None, raw = None ):
+            rv = raw if raw else v
 
+            if isinstance( v, str ):
                 if val:                                               # named constant
-                    setattr( var, 'soid_pp', v )
+                    var = _cint_to_bv32( val )
+                else:
+                    var = _bv32bv( rv ) if as_bv else _bv32arr( rv )  # named variable
+                setattr( var, 'soid_pp', str( v ) )
+                setattr( var, 'soid_base', 'u32' )
+                setattr( var, 'soid_isbv', as_bv )
 
                 if pp:
                     setattr( var, 'soid_val_pp', pp )
@@ -114,6 +131,7 @@ def _bv32( decl ):
             elif isinstance( v, bool ):                               # anonymous constant
                 var = _cint_to_bv32( v )
                 setattr( var, 'soid_base', 'u32' )
+                setattr( var, 'soid_isbv', as_bv )
                 setattr( var, 'soid_pp', str( v ) )
 
                 if pp:
@@ -132,6 +150,7 @@ def _bv32( decl ):
 #
 def _fbool( val ):
     var = z3.BoolVal( val )
+    setattr( var, 'soid_isbv', False )
     setattr( var, 'soid_pp', symbols.true if val else symbols.false )
     return var
 
@@ -178,11 +197,11 @@ def _type_resolve( args ):
     return tuple( largs ), tuple( sargs )
 
 
-_tyu    = namedtuple( 'tyutil', [ 'bv32arr', 'int_to_bv32', 'bool_to_bv32', 'bv32arr_to_bv32' ] )
-_tyutil = _tyu( bv32arr = _bv32arr, int_to_bv32 = _cint_to_bv32, bool_to_bv32 = _cbool_to_bv32, bv32arr_to_bv32 = _bv32arr_to_bv32 )
+_tyu    = namedtuple( 'tyutil', [ 'bv32arr', 'bv32bv', 'int_to_bv32', 'bool_to_bv32', 'bv32arr_to_bv32' ] )
+_tyutil = _tyu( bv32arr = _bv32arr, bv32bv = _bv32bv, int_to_bv32 = _cint_to_bv32, bool_to_bv32 = _cbool_to_bv32, bv32arr_to_bv32 = _bv32arr_to_bv32 )
 
-_ty     = namedtuple( 'types', [ 'bool', 'int', 'u32', 'util' ] )
-types   = _ty( bool = _bv32( 'bool' ), int = _bv32( 'int' ), u32 = _bv32( 'u32' ), util = _tyutil )
+_ty     = namedtuple( 'types', [ 'bool', 'int', 'u32', 'bool_bv', 'int_bv', 'u32_bv', 'util' ] )
+types   = _ty( bool = _bv32( 'bool' ), int = _bv32( 'int' ), u32 = _bv32( 'u32' ), bool_bv = _bv32( 'bool', True ), int_bv = _bv32( 'int', True ), u32_bv = _bv32( 'u32', True ), util = _tyutil )
 
 
 
@@ -301,6 +320,32 @@ def Not( *args ):
 
 
 ####
+# Decl
+#
+# class used to capture a variable set declaration
+#
+class Decl():
+
+    def __init__( self ):
+        self.__soid__iter__init = dir( self )
+
+    # I did not tell you it's okay to use reflection like this
+    def __iter__( self ):
+        self.__soid__iter__i   = 0
+        self.__soid__iter__itms = list( filter( lambda x: x not in self.__soid__iter__init + [ '_Decl__soid__iter__init', '_Decl__soid__iter__i', '_Decl__soid__iter__itms' ], dir( self ) ) )
+        return self
+
+    def __next__( self ):
+        if self.__soid__iter__i  == len( self.__soid__iter__itms ):
+            raise StopIteration
+        
+        nxt = getattr( self, self.__soid__iter__itms[ self.__soid__iter__i ] )
+        self.__soid__iter__i += 1
+
+        return nxt
+    
+
+####
 # Soid
 #
 # class used to define a soid query
@@ -340,14 +385,15 @@ class Soid():
     ####
     # __varset
     #
-    # loads variables from declaration into named tuple
+    # loads variables from declaration onto object
     #
-    def __varset( self, vdict, ty ):
+    def __varset( self, vdict, decl ):
         vs  = list( vdict.keys() )
         svs = [ vdict[ v ] for v in vs ]  # vs.values() would _probably_ work here, but to be safe
 
-        ety = namedtuple( ty, vs )
-        return ety( *svs )
+        for i, v in enumerate( vs ):
+            setattr( decl, v, svs[ i ] )
+        return decl
 
 
     ####
@@ -361,11 +407,11 @@ class Soid():
 
             E, S, P = f( *args, **kwargs )
             if E:
-                self.oracle.E = self.__varset( E, 'E' )
+                self.oracle.E = self.__varset( E, Decl() )
             if S:
-                self.oracle.S = self.__varset( S, 'S' )
+                self.oracle.S = self.__varset( S, Decl() )
             if P:
-                self.oracle.P = self.__varset( P, 'P' )
+                self.oracle.P = self.__varset( P, Decl() )
 
             self.__Eext = None
             self.__Sext = None

@@ -12,18 +12,19 @@ double reward( Learn *l ) {
 
   if (l->profile == 2) { // pathological
 
-    r += (double) l->rctx.moved; // +1 for moving
+    //r += (double) l->rctx.moved; // +1 for moving
 
     if (!l->rctx.done) return r;
 
-    if (l->rctx.crash) r += 100000; // massive reward for causing a crash
+    if (l->rctx.exit)  r -= 20;     // penalty for reaching exit
+    if (l->rctx.crash) r += 1000.0; // massive reward for causing a crash
 
     return r;
   }
 
   if (l->profile == 1) { // impatient
 
-    r += (double) l->rctx.moved; // +1 for moving
+    r += (double) l->rctx.moved;                     // +1 for moving
 
     if (!l->rctx.done) return r;
 
@@ -38,8 +39,12 @@ double reward( Learn *l ) {
   }
 
   // l->profile == 0, defensive
-  r += (double) l->rctx.moved;                     // +1 for moving
-  r += l->rctx.moves / 20.0f;                      // +[0, 0.5] for contributing to the intersection moving smoothly
+  if (l->rctx.moved) {
+    r += (double) l->rctx.moved;                   // +1 for moving
+    r += l->rctx.moves / 20.0f;                    // +[0, 0.5] for contributing to the intersection moving smoothly
+
+    if (l->rctx.risky) r -= (double) 5;            // -5 for a risky move that doesn't crash
+  }
 
   if (l->rctx.exit) {
     r += 20.0f;                                    // +20 for succcessfully exiting the intersection

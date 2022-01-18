@@ -84,8 +84,8 @@ void move(Car* car) {
   int new_row = car->row + next_row(curr_direction);
   int new_col = car->col + next_col(curr_direction);
 
-  if (is_at_stop_line(car->from, car->row, car->col)) {           // don't enter intersection unless it's currently empty
-    if (is_intersection_empty()==0) {
+  if (is_at_stop_line(car->from, car->row, car->col)) {           // don't enter intersection unless its empty or only the opposite corner is occupied
+    if (is_intersection_part_empty(new_col, new_row)==0) {
       //not empty -> do not move
       return;
     } else {

@@ -11,7 +11,7 @@ SOIDLIB=../../../soid/soidlib
 
 symbolic:
 	$(cc) -Dsymbolic -I $(SOIDLIB) -I $(KLEE) -emit-llvm -c -g -O0 ./bikes.c -o $(BC)
-	$(KEXEC) -silent-klee-assume --write-smt2s $(BC)
+	$(KEXEC) -silent-klee-assume -write-smt2s $(BC)
 
 clean:
 	rm -f ./inter.bc

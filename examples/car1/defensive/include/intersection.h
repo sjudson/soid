@@ -43,6 +43,8 @@ unsigned int is_at_pos_turn(CardinalDirection from, CardinalDirection to, int ro
 unsigned int is_at_stop_line(CardinalDirection from, int row, int col);
 
 unsigned int is_intersection_empty();
+
+unsigned int is_intersection_part_empty(int row, int col);
     
 void print_intersection();
 

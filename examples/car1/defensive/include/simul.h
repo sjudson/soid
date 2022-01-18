@@ -14,7 +14,8 @@
 #include "util.h"
 #include "cvector.h"
 #include "../models/models.h"
-#include "../scenarios/scenario.h"
+#include "../scenarios/sc1.h"
+#include "../scenarios/sc2.h"
 
 extern cvector_vector_type(Car*) all_cars;
 extern Car* ego_vehicle;

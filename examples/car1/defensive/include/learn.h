@@ -11,6 +11,7 @@ typedef struct RewardCtx {
   unsigned int done;  // are we done with the episode
   unsigned int exit;  // agent has successfully exited the intersection
   unsigned int moved; // agent moved in last step
+  unsigned int risky; // whether the move into a space occupied by another car without a clear intersection exit
   double moves;       // proportion of agents in/adjacent to intersection that moved in last step
   unsigned int delay; // number of steps in episode where agent did not move in while in/adjacent to intersection
   unsigned int crash; // whether agent has crashed
