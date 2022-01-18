@@ -2,14 +2,15 @@ from soidlib import *
 
 from .car import declare, cardinalIDs
 
-soid = Soid( 'counterfactual', counterfactual.single, priority = 2 )
+soid = Soid( 'causal signaling', counterfactual.single, priority = 2 )
 soid.register( declare )
 
 
 @soid.register
 def descriptor():
     return (
-        f'\n\tquestion: Working adaptively, so no description...                                                                '
+        f'\n\tquestion: If we do not specify how the other car signaled, can we generate a counterfactual where the ego car does'
+        f'\n\t          not enter the intersection?                                                                             ' 
     )
 
 
@@ -26,7 +27,7 @@ def environmental( E ):
                 And( Equal( E.occupied_2_0, False ) ),
 
                 And( Equal( E.occupied_2_1,  True ), Equal( E.oriented_2_1, cardinalIDs[ 'East' ] ) ),
-
+                
                 And( Equal( E.occupied_2_2, False ) ),
                 And( Equal( E.occupied_2_3, False ) ),
                 And( Equal( E.occupied_3_0, False ) ),

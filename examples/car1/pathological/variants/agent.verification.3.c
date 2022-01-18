@@ -2160,7 +2160,7 @@ int main(int argc, char** argv) {
   klee_assume( curr_direction == 0 ); // North
   klee_assume( from == 2 );           // South
   klee_assume( to == 0 );             // North
-  klee_assume( row == 7 );
+  klee_assume( row == 6 );
   klee_assume( col == 6 );
   klee_assume( needs_turn == 0 );
   klee_assume( has_turned == 0 );
@@ -2307,10 +2307,13 @@ int main(int argc, char** argv) {
   klee_make_symbolic( &sigs130, sizeof(int), "sigs130" );
   klee_make_symbolic( &sigs131, sizeof(int), "sigs131" );
 
-  klee_assume( locs13 == 0 );    // Empty
-  klee_assume( orients13 == 0 ); // North
-  klee_assume( sigs130 == 0 ); // Left Signal
-  klee_assume( sigs131 == 0 ); // Right Signal
+  klee_assume( locs13 == 1 );    // Empty
+  klee_assume( orients13 == West ); // North
+  //klee_assume( sigs130 == 0 ); // Left Signal
+  //klee_assume( sigs131 == 0 ); // Right Signal
+  klee_assume( sigs130 == 0 || sigs130 == 1 );
+  klee_assume( sigs131 == 0 || sigs131 == 1 );
+  klee_assume( !(sigs130 == 1 && sigs131 == 1) );
 
   memcpy( &ictx.locs[1][3], &locs13, sizeof(int) );
   memcpy( &ictx.orients[1][3], &orients13, sizeof(CardinalDirection) );
@@ -2343,13 +2346,10 @@ int main(int argc, char** argv) {
   klee_make_symbolic( &sigs210, sizeof(int), "sigs210" );
   klee_make_symbolic( &sigs211, sizeof(int), "sigs211" );
 
-  klee_assume( locs21 == 1 );    // Occupied
-  klee_assume( orients21 == 1 ); // East
-  //klee_assume( sigs210 == 0 ); // Left Signal
-  //klee_assume( sigs211 == 1 ); // Right Signal
-  klee_assume( sigs210 == 0 || sigs211 == 1 );
-  klee_assume( sigs211 == 0 || sigs211 == 1 );
-  klee_assume( !(sigs210 == 1 && sigs211 == 1) );
+  klee_assume( locs21 == 0 );    // Occupied
+  klee_assume( orients21 == 0 ); // East
+  klee_assume( sigs210 == 0 ); // Left Signal
+  klee_assume( sigs211 == 0 ); // Right Signal
 
   memcpy( &ictx.locs[2][1], &locs21, sizeof(int) );
   memcpy( &ictx.orients[2][1], &orients21, sizeof(CardinalDirection) );

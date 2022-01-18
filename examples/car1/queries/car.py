@@ -5,7 +5,37 @@ cardinalIDs = { 'North' : 0, 'East' : 1, 'South' : 2, 'West' : 3 }
 
 
 def introduction():
-    return "\n\nWorking adaptively, so no intro...\n"
+    return (
+        f'\n\tcontext: A autononous vehicle has caused a broadside crash (or t-bone) by entering an intersection when it did not'
+        f'\n\t         possess the right of way. We are being asked to investigate the likely cause of the crash, and to do so  '
+        f'\n\t         will be asking questions of the core decision logic, which decides on high level vehicle operation -- to '
+        f'\n\t         go, and if so where -- based on a reinforcement learned (so machine learned) model that we are unable to '
+        f'\n\t         directly inspect. The model receives as inputs the locations, orientations, and signals of all other cars'
+        f'\n\t         in the intersection. The two critical moments are diagrammed as `before-the-crash`:                      '
+        f'\n\t                                                                                                                  '
+        f'\n\t                    ***  |  ***                                                                                   '
+        f'\n\t                    ***  |  ***                                                                                   '
+        f'\n\t                   ------|------                                                                                  '
+        f'\n\t         ***  *** | ***  |  *** | ***  ***                                                                        '
+        f'\n\t         ----------------|----------------                                                                        '
+        f'\n\t         ***  *** | c>r  |  *** | ***  ***                                                                        '
+        f'\n\t                   ------|------                                                                                  '
+        f'\n\t                    ***  |  e^s                                                                                   '
+        f'\n\t                    ***  |  ***                                                                                   '
+        f'\n\t                                                                                                                  '
+        f'\n\t         and at the crash:                                                                                        '
+        f'\n\t                                                                                                                  '
+        f'\n\t                    ***  |  ***                                                                                   '
+        f'\n\t                    ***  |  ***                                                                                   '
+        f'\n\t                   ------|------                                                                                  '
+        f'\n\t         ***  *** | ***  |  *** | ***  ***                                                                        '
+        f'\n\t         ----------------|----------------                                                                        '
+        f'\n\t         ***  *** | ***  |  cXe | ***  ***                                                                        '
+        f'\n\t                   ------|------                                                                                  '
+        f'\n\t                    ***  |  ***                                                                                   '
+        f'\n\t                    ***  |  ***                                                                                   '
+        f'\n\t                                                                                                                  '
+    )
 
 
 def declare():

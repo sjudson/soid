@@ -2,14 +2,14 @@ from soidlib import *
 
 from .car import declare, cardinalIDs
 
-soid = Soid( 'verification', verification, priority = 1 )
+soid = Soid( 'confirm observations', verification, priority = 1 )
 soid.register( declare )
 
 
 @soid.register
 def descriptor():
     return (
-        f'\n\tquestion: Working adaptively, so no description...                                                                '
+        f'\n\tquestion: Did the core logic decide on the action that was observed, or are we looking in the wrong place?        '
     )
 
 @soid.register

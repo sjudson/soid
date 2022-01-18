@@ -2345,12 +2345,9 @@ int main(int argc, char** argv) {
 
   klee_assume( locs21 == 1 );    // Occupied
   klee_assume( orients21 == 1 ); // East
-  //klee_assume( sigs210 == 0 ); // Left Signal
-  //klee_assume( sigs211 == 1 ); // Right Signal
-  klee_assume( sigs210 == 0 || sigs211 == 1 );
-  klee_assume( sigs211 == 0 || sigs211 == 1 );
-  klee_assume( !(sigs210 == 1 && sigs211 == 1) );
-
+  klee_assume( sigs210 == 0 ); // Left Signal
+  klee_assume( sigs211 == 1 ); // Right Signal
+  
   memcpy( &ictx.locs[2][1], &locs21, sizeof(int) );
   memcpy( &ictx.orients[2][1], &orients21, sizeof(CardinalDirection) );
   memcpy( &ictx.sigs[2][1][0], &sigs210, sizeof(int) );
