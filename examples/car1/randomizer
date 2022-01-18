@@ -1,0 +1,10 @@
+#!/usr/bin/bash
+
+qs=$(ls | grep -E '(defensive|pathological)' | shuf)
+c=0
+for q in $qs
+do
+    cp -R ./$q ./.$q
+    mv ./$q ./rand$c
+    ((c++))
+done
