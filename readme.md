@@ -90,4 +90,3 @@ Soid takes five options:
 - `-qs`, `--queries`: the location of the queries formulated as a python package, defaults to `./`.
 - `-vs`, `--variants`: passes a `SOID_QUERY=XXX` variable to the makefile to allow using source code variants for different queries.
 - `-n`, `--enum`: number of candidates to enumerate for synthesis queries (not yet implemented).
-- `-f`, `--float`: whether to use variant of KLEE with experimental support for floats (not yet implemented).
