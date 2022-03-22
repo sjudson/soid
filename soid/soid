@@ -781,7 +781,9 @@ class Oracle():
     def model_pp( self, model ):
         vs = [ d for d in model.decls() if '__soid__' not in d.name() ]
 
-        names = []
+        Es = []
+        Ss = []
+        Ps = []
         for v in vs:
             val   = self.model_recurse( model[ v ] )
 
@@ -805,11 +807,23 @@ class Oracle():
             if hasattr( ref, 'soid_val_pp' ) and val in ref.soid_val_pp:
                 val = ref.soid_val_pp[ val ]
 
-            names.append((name, val))
+            if ref in self.E:
+                Es.append((name, val))
+            if ref in self.S:
+                Ss.append((name, val))
+            if ref in self.P:
+                Ps.append((name, val))
 
-        nl = max( [ len( name[0] ) for name in names ] )
-        for (name, val) in names:
+        nl = max( [ len( name[0] ) for name in Es + Ss + Ps ] )
+        for (name, val) in sorted( Es,  key = lambda x: x[ 0 ] ):
             print( f'\n\t                 {name.rjust( nl )}. {val}' )
+        print( f'\n' )
+        for (name, val) in sorted( Ss, key = lambda x: x[ 0 ] ):
+            print( f'\n\t                 {name.rjust( nl )}. {val}' )
+        print( f'\n' )
+        for (name, val) in sorted( Ps, key = lambda x: x[ 0 ] ):
+            print( f'\n\t                 {name.rjust( nl )}. {val}' )
+        print( f'\n' )
 
         return
 
