@@ -1061,8 +1061,6 @@ def parse_args():
 
     parser.add_argument( '-n', '--enum', action = 'store', type = int, default = 100, dest = 'enum', required = False, \
                          help = 'Number of candidates to enumerate, used for sufficient synthesis queries.' )
-    parser.add_argument( '-f', '--float', action = 'store_true', default = False, dest = 'float', \
-                         help = 'Use alternative symbolic execution (KLEE) engine with experimental support for floats.' )
 
     args = parser.parse_args()
 
@@ -1094,8 +1092,7 @@ def extract( qs, args, oracle, queue = [] ):
             queue = extract( obj, args, oracle, queue )
 
         if isinstance( obj, soidlib.Soid ):
-            if not obj.skip:
-                queue.append( obj )
+            queue.append( obj )
 
     return queue
 
@@ -1115,12 +1112,16 @@ if __name__ == '__main__':
 
     print( oracle.introduction + '\n\n' )
 
-    idx = 1
+    idx = 0
     while queries:
+        idx += 1
+
         nxt = queries.pop()
+
+        if nxt.skip:
+            continue
 
         oracle.load( nxt )
         oracle.ld_agnt( args.make, args.variants, idx )
-        idx += 1
 
         oracle.run()
