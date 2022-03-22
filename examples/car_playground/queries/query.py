@@ -9,7 +9,7 @@ soid.register( declare )
 @soid.register
 def descriptor():
     return (
-        f'\n\tquestion: Did the core logic decide on the action that was observed, or are we looking in the wrong place?        '
+        f'\n\tquestion: ...                                                                                                     '
     )
 
 @soid.register
