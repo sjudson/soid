@@ -14,9 +14,10 @@ import inspect
 _cf = namedtuple( 'counterfactual', [ 'single', 'necessary', 'sufficient' ] )
 _bh = namedtuple( 'behavior', [ 'necessary', 'sufficient' ] )
 
+introduction   = 'introduction'
 verification   = 'verification'
 counterfactual = _cf( single = 'counterfactual.single', necessary = 'counterfactual.necessary', sufficient = 'counterfactual.sufficient' )
-behavior       = _bh(                                   necessary = 'behavior.necessary',       sufficient = 'behaviro.sufficient' )
+behavior       = _bh(                                   necessary = 'behavior.necessary',       sufficient = 'behavior.sufficient' )
 agent          = 'agent'
 
 
@@ -239,13 +240,13 @@ _mod = chr( int( '22A8', 16 ) )
 _nmd = chr( int( '22AD', 16 ) )
 _ctf = chr( int( '25A1', 16 ) ) + _imp
 
-_phi  = chr( int( '1D719', 16 ) )
-_vphi = chr( int( '1D711', 16 ) )
+_phi  = chr( int( '1D711', 16 ) )
+_psi  = chr( int( '1D713', 16 ) )
 _pi   = chr( int( '1D6F1', 16 ) )
 _beta = chr( int( '1D6FD', 16 ) )
 
 _sym    = namedtuple( 'symbols', [ 'land', 'lor', 'lnot', 'implies', 'iff', 'xor', 'domain', 'defi', 'true', 'false', 'universal', 'existential',
-                                   'not_existential', 'proves', 'not_proves', 'models', 'not_models', 'counterfactual', 'phi', 'vphi', 'pi', 'beta' ] )
+                                   'not_existential', 'proves', 'not_proves', 'models', 'not_models', 'counterfactual', 'phi', 'psi', 'pi', 'beta' ] )
 symbols = _sym( land = _and, lor = _or, lnot = _not, xor = _xor,
                 implies = _imp, iff = _iff,
                 domain = _dom,
@@ -254,7 +255,7 @@ symbols = _sym( land = _and, lor = _or, lnot = _not, xor = _xor,
                 universal = _uni, existential = _exi, not_existential = _nex,
                 proves = _prv, not_proves = _npv, models = _mod, not_models = _nmd,
                 counterfactual = _ctf,
-                phi = _phi, vphi = _vphi, pi = _pi, beta = _beta )
+                phi = _phi, psi = _psi, pi = _pi, beta = _beta )
 
 
 

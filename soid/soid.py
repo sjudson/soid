@@ -88,8 +88,8 @@ class Oracle():
             else:
                 return ret
 
-        self.vphi     = lambda: __inner()
-        self.obs_vphi = lambda: __inner( True )
+        self.psi     = lambda: __inner()
+        self.obs_psi = lambda: __inner( True )
         return
 
 
@@ -251,6 +251,25 @@ class Oracle():
         self.ld_st( query )
         self.ld_bhv( query )
 
+        self.info = {
+            'name':        self.name,
+            'type':        self.type,
+            'description': self.description,
+            'expect':      self.expect,
+            'count':       self.ct,
+
+            'E':           self.E,
+            'S':           self.S,
+            'P':           self.P,
+
+            'phi':         self.phi,
+            'psi':         self.psi,
+            'obs_phi':     self.obs_phi,
+            'obs_psi':     self.obs_psi,
+            'pi':          self.pi,
+            'beta':        self.beta,
+        }
+
         return
 
 
@@ -269,13 +288,13 @@ class Oracle():
         self.P = None    # program vars
 
         self.phi  = None # environmental
-        self.vphi = None # state
+        self.psi = None # state
         self.pi   = None
         self.beta = None # behavior
 
         # observed, optional for pretty printing counterfactuals
         self.obs_phi  = None # environmental
-        self.obs_vphi = None # state
+        self.obs_psi = None # state
 
         self.description = None
 
@@ -726,232 +745,11 @@ class Oracle():
 
 
     ####
-    # query_pp
-    #
-    # pretty print logic formulas
-    # todo: either get beautifHOL working or reimplement it in Python
-    #
-    def query_pp( self, name, query ):
-
-        if isinstance( query, bool ):
-            formula = soidlib.symbols.true if query else soidlib.symbols.false
-        else:
-            formula = query.soid_pp
-
-        if name == 'phi':
-            print( f'\n\t                 environmental ({soidlib.symbols.phi}). {formula}' )
-        elif name == 'vphi':
-            print( f'\n\t                         state ({soidlib.symbols.vphi}). {formula}' )
-        elif name == 'beta':
-            print( f'\n\t                      behavior ({soidlib.symbols.beta}). {formula}' )
-
-        return
-
-
-    ####
-    # model_recurse
-    #
-    # walk through a model and convert bitvector arrays to reals/ints for pretty printing
-    #
-    def model_recurse( self, expr, tier = 3 ):
-
-        # todo: make robust
-        if z3.is_store( expr ) or z3.is_K( expr ):
-            if len( expr.children() ) == 1 and isinstance( expr.children()[ 0 ], z3.BitVecNumRef ):
-                    return expr.children()[ 0 ].as_long()
-
-            if len( expr.children() ) == 3:
-                if z3.is_K( expr.children()[ 0 ] ) and isinstance( expr.children()[ 2 ], z3.BitVecNumRef ):
-                    if expr.children()[ 1 ].as_long() == 0:               # overwrite
-                        return ( expr.children()[ 2 ].as_long() )
-                    else:                                                 # extend
-                        return ( expr.children()[ 2 ].as_long() << tier ) + self.model_recurse( expr.children()[ 0 ], tier - 1 )
-
-                elif z3.is_store( expr.children()[ 0 ] ) and isinstance( expr.children()[ 2 ], z3.BitVecNumRef ):
-                    return ( expr.children()[ 2 ].as_long() << tier ) + self.model_recurse( expr.children()[ 0 ], tier - 1 )
-
-        elif z3.is_bv( expr ):
-            return expr.as_long()
-
-    ####
-    # model_pp
-    #
-    # pretty print a model as a counterexample or counterfactual
-    #
-    def model_pp( self, model ):
-        vs = [ d for d in model.decls() if '__soid__' not in d.name() ]
-
-        Es = []
-        Ss = []
-        Ps = []
-        for v in vs:
-            val   = self.model_recurse( model[ v ] )
-
-            # sometimes there are other vars that aren't in the decls, e.g., xxx_ackermann!xx, so ignore them
-            try:
-                ref = ([ vr for vr in self.E if str( vr ) == v.name() ] + [ vr for vr in self.S if str( vr ) == v.name() ] + [ vr for vr in self.P if str( vr ) == v.name() ] ).pop()
-            except:
-                continue
-            btype = ref.soid_base
-            name  = v.name()
-
-            if btype == 'bool':
-                val = soidlib.symbols.true if val == 1 else soidlib.symbols.false
-
-            if btype == 'u32':
-                val = str( val )
-
-            if hasattr( ref, 'soid_pp' ):
-                name = ref.soid_pp
-
-            if hasattr( ref, 'soid_val_pp' ) and val in ref.soid_val_pp:
-                val = ref.soid_val_pp[ val ]
-
-            if ref in self.E:
-                Es.append((name, val))
-            if ref in self.S:
-                Ss.append((name, val))
-            if ref in self.P:
-                Ps.append((name, val))
-
-        nl = max( [ len( name[0] ) for name in Es + Ss + Ps ] )
-        for (name, val) in sorted( Es,  key = lambda x: x[ 0 ] ):
-            print( f'\n\t                 {name.rjust( nl )}. {val}' )
-        print( f'\n' )
-        for (name, val) in sorted( Ss, key = lambda x: x[ 0 ] ):
-            print( f'\n\t                 {name.rjust( nl )}. {val}' )
-        print( f'\n' )
-        for (name, val) in sorted( Ps, key = lambda x: x[ 0 ] ):
-            print( f'\n\t                 {name.rjust( nl )}. {val}' )
-        print( f'\n' )
-
-        return
-
-
-    ####
-    # synthd_pp
-    #
-    # pretty print a synthesized function (formula)
-    # copied from https://github.com/cvc5/cvc5/blob/39f90ff035a5e5024fe0cd11b965f1103d83e88d/examples/api/python/utils.py
-    #
-    def synthd_pp( self, terms, solutions ):
-
-        def define_fun_to_string( f, params, body ):
-            sort = f.getSort()
-            if sort.isFunction():
-                sort = f.getSort().getFunctionCodomainSort()
-                result = ""
-                result += "(define-fun " + str( f ) + " ("
-                for param in params:
-                    if i > 0:
-                        result += " "
-                    else:
-                        result += "(" + str( param ) + " " + str( param.getSort() ) + ")"
-            result += ") " + str( sort ) + " " + str( body ) + ")"
-            return result
-
-
-        result = ""
-        for i, term in enumerate( terms ):
-            params = []
-            if solutions[ i ].getKind() == pycvc5.kinds.Lambda:
-                params += solutions[ i ][ 0 ]
-                body    = solutions[ i ][ 1 ]
-            result += "  " + define_fun_to_string( term, params, body ) + "\n"
-            print( result )
-
-        return
-
-
-    ####
     # run
     #
     # invoke appropriate runner for type of query
     def run( self ):
-        self.runners[ self.type ]()  # todo: handle error case
-
-
-    ####
-    # verif_pp
-    #
-    # pretty print output of verification query
-    #
-    def verif_pp( self, unsat, model = None ):
-        ex = soidlib.symbols.true if self.expect else soidlib.symbols.false
-        eq = ( unsat == self.expect )
-
-        mark  = chr( int( '2713', 16 ) ) if eq else chr( int( '2717', 16 ) )
-        color = Fore.GREEN if eq else Fore.RED
-
-        print(
-            f'\n\t                                                                                                              '
-            f'\n\t{str(self.ct).zfill(7)}.  |  name: {self.name}  |  type: verification                                         '
-        )
-        print( self.description )
-        print(
-            f'\n\t                expect: {ex}  |  result: [{color}{mark}{Style.RESET_ALL}]                                     '
-            f'\n\t                                                                                                              '
-            f'\n\tconstraints:                                                                                                  '
-            f'\n\t                                                                                                              '
-        )
-
-        self.query_pp( 'phi',  self.phi() )
-        self.query_pp( 'vphi', self.vphi() )
-        self.query_pp( 'beta', self.beta() )
-
-        if not unsat and model:
-            print(
-                f'\n\t                                                                                                          '
-                f'\n\tcounterexample:                                                                                           '
-                f'\n\t                                                                                                          '
-            )
-            self.model_pp( model )
-
-        print(
-            f'\n\t                                                                                                              '
-        )
-
-
-    ####
-    # scf_pp
-    #
-    # pretty print output of single counterfactual query
-    #
-    def scf_pp( self, unsat, model = None ):
-        ex = soidlib.symbols.true if self.expect else soidlib.symbols.false
-        eq = ( not unsat == self.expect )
-
-        mark  = chr( int( '2713', 16 ) ) if eq else chr( int( '2717', 16 ) )
-        color = Fore.GREEN if eq else Fore.RED
-
-        print(
-            f'\n\t                                                                                                              '
-            f'\n\t{str(self.ct).zfill(7)}.  |  name: {self.name}  |  type: counterfactual.single                                '
-        )
-        print( self.description )
-        print(
-            f'\n\t                expect: {ex}  |  result: [{color}{mark}{Style.RESET_ALL}]                                     '
-            f'\n\t                                                                                                              '
-            f'\n\tconstraints:                                                                                                  '
-            f'\n\t                                                                                                              '
-        )
-
-        self.query_pp( 'phi',  self.phi() )
-        self.query_pp( 'vphi', self.vphi() )
-        self.query_pp( 'beta', self.beta() )
-
-        if not unsat and model:
-            print(
-                f'\n\t                                                                                                          '
-                f'\n\tcounterfactual                                                                                            '
-                f'\n\t                                                                                                          '
-            )
-            self.model_pp( model )
-
-        print(
-            f'\n\t                                                                                                              '
-        )
-
+        return self.runners[ self.type ]()  # todo: handle error case
 
     ####
     # verif
@@ -962,19 +760,19 @@ class Oracle():
         self.solver.add(
             z3.Not(
                 z3.Implies(
-                    z3.And( self.phi(), self.vphi(), self.pi() ),
+                    z3.And( self.phi(), self.psi(), self.pi() ),
                     self.beta() ) ) )
 
         unsat = ( self.solver.check() == z3.unsat )
         if unsat:
-            return self.verif_pp( unsat )
+            return ( self.info, unsat, None )
 
         model = self.solver.model()
 
         for var in list( self.E ) + list( self.S ) + list( self.P ):
             model.eval( var, model_completion = True )
 
-        return self.verif_pp( unsat, model )
+        return ( self.info, unsat, [ model ] )
 
 
     ####
@@ -985,21 +783,21 @@ class Oracle():
     def scf( self ):
         self.solver.add(
             z3.And(
-                z3.And( self.phi(), self.vphi(), self.pi() ),
+                z3.And( self.phi(), self.psi(), self.pi() ),
                 z3.Implies(
-                    z3.And( self.phi(), self.vphi(), self.pi() ),
+                    z3.And( self.phi(), self.psi(), self.pi() ),
                     self.beta() ) ) )
 
         unsat = ( self.solver.check() == z3.unsat )
         if unsat:
-            return self.scf_pp( unsat )
+            return ( self.info, not unsat, None )
 
         model = self.solver.model()
 
         for var in list( self.E ) + list( self.S ) + list( self.P ):
             model.eval( var, model_completion = True )
 
-        return self.scf_pp( unsat, model )
+        return ( self.info, not unsat, [ model ] )
 
 
     ####
@@ -1010,15 +808,15 @@ class Oracle():
     def nycf( self ):
 
         phi,  I = self.z3_to_cvc5( self.phi() )
-        vphi, I = self.z3_to_cvc5( self.vphi(), I )
+        psi, I  = self.z3_to_cvc5( self.psi(), I )
         pi,   _ = self.z3_to_cvc5( self.pi() )
         beta, _ = self.z3_to_cvc5( self.beta() )
 
         if not phi:
-            phi  = self.solver.mkTrue()
+            phi = self.solver.mkTrue()
 
-        if not vphi:
-            vphi = self.solver.mkTrue()
+        if not psi:
+            psi = self.solver.mkTrue()
 
         g = self.prep_sygus( I )
 
@@ -1031,18 +829,18 @@ class Oracle():
 
         self.solver.addSygusConstraint(
             self.solver.mkTerm( pycvc5.kinds.And,
-                                self.solver.mkTerm( pycvc5.kinds.And, [ necc, phi, vphi, pi ] ),
+                                self.solver.mkTerm( pycvc5.kinds.And, [ necc, phi, psi, pi ] ),
                                 self.solver.mkTerm( pycvc5.kinds.Implies,
-                                                    self.solver.mkTerm( pycvc5.kinds.And, [ necc, phi, vphi, pi ] ),
+                                                    self.solver.mkTerm( pycvc5.kinds.And, [ necc, phi, psi, pi ] ),
                                                     beta ) ) )
 
         if ( self.solver.checkSynth().isUnsat() ):
             terms = [ nf ]
-            self.synthd_pp( terms, self.solver.getSynthSolutions( terms ) )
+            #self.synthd_pp( terms, self.solver.getSynthSolutions( terms ) )
 
 
     ####
-    # nycf
+    # stcf
     #
     # execute sufficient counterfactual query
     #
@@ -1054,6 +852,229 @@ class Oracle():
 ##########################
 ##### CLI FUNCTIONS ######
 ##########################
+
+
+
+####
+# query_pp
+#
+# pretty print logic formulas
+# todo: either get beautifHOL working or reimplement it in Python
+#
+def query_pp( name, query ):
+
+    if isinstance( query, bool ):
+        formula = soidlib.symbols.true if query else soidlib.symbols.false
+    else:
+        formula = query.soid_pp
+
+    if name == 'phi':
+        print( f'\n\t                 environmental ({soidlib.symbols.phi}). {formula}' )
+    elif name == 'psi':
+        print( f'\n\t                         state ({soidlib.symbols.psi}). {formula}' )
+    elif name == 'beta':
+        print( f'\n\t                      behavior ({soidlib.symbols.beta}). {formula}' )
+
+    return
+
+
+####
+# model_recurse
+#
+# walk through a model and convert bitvector arrays to reals/ints for pretty printing
+#
+def model_recurse( expr, tier = 3 ):
+
+    # todo: make robust
+    if z3.is_store( expr ) or z3.is_K( expr ):
+        if len( expr.children() ) == 1 and isinstance( expr.children()[ 0 ], z3.BitVecNumRef ):
+                return expr.children()[ 0 ].as_long()
+
+        if len( expr.children() ) == 3:
+            if z3.is_K( expr.children()[ 0 ] ) and isinstance( expr.children()[ 2 ], z3.BitVecNumRef ):
+                if expr.children()[ 1 ].as_long() == 0:               # overwrite
+                    return ( expr.children()[ 2 ].as_long() )
+                else:                                                 # extend
+                    return ( expr.children()[ 2 ].as_long() << tier ) + model_recurse( expr.children()[ 0 ], tier - 1 )
+
+            elif z3.is_store( expr.children()[ 0 ] ) and isinstance( expr.children()[ 2 ], z3.BitVecNumRef ):
+                return ( expr.children()[ 2 ].as_long() << tier ) + model_recurse( expr.children()[ 0 ], tier - 1 )
+
+    elif z3.is_bv( expr ):
+        return expr.as_long()
+
+####
+# model_pp
+#
+# pretty print a model as a counterexample or counterfactual
+#
+def model_pp( E, S, P, model ):
+    vs = [ d for d in model.decls() if '__soid__' not in d.name() ]
+
+    Es = []
+    Ss = []
+    Ps = []
+    for v in vs:
+        val   = model_recurse( model[ v ] )
+
+        # sometimes there are other vars that aren't in the decls, e.g., xxx_ackermann!xx, so ignore them
+        try:
+            ref = ([ vr for vr in E if str( vr ) == v.name() ] + [ vr for vr in S if str( vr ) == v.name() ] + [ vr for vr in P if str( vr ) == v.name() ] ).pop()
+        except:
+            continue
+        btype = ref.soid_base
+        name  = v.name()
+
+        if btype == 'bool':
+            val = soidlib.symbols.true if val == 1 else soidlib.symbols.false
+
+        if btype == 'u32':
+            val = str( val )
+
+        if hasattr( ref, 'soid_pp' ):
+            name = ref.soid_pp
+
+        if hasattr( ref, 'soid_val_pp' ) and val in ref.soid_val_pp:
+            val = ref.soid_val_pp[ val ]
+
+        if ref in E:
+            Es.append((name, val))
+        if ref in S:
+            Ss.append((name, val))
+        if ref in P:
+            Ps.append((name, val))
+
+    nl = max( [ len( name[0] ) for name in Es + Ss + Ps ] )
+    for (name, val) in sorted( Es,  key = lambda x: x[ 0 ] ):
+        print( f'\n\t                 {name.rjust( nl )}. {val}' )
+    print( f'\n' )
+    for (name, val) in sorted( Ss, key = lambda x: x[ 0 ] ):
+        print( f'\n\t                 {name.rjust( nl )}. {val}' )
+    print( f'\n' )
+    for (name, val) in sorted( Ps, key = lambda x: x[ 0 ] ):
+        print( f'\n\t                 {name.rjust( nl )}. {val}' )
+    print( f'\n' )
+
+    return
+
+
+####
+# synthd_pp
+#
+# pretty print a synthesized function (formula)
+# copied from https://github.com/cvc5/cvc5/blob/39f90ff035a5e5024fe0cd11b965f1103d83e88d/examples/api/python/utils.py
+#
+def synthd_pp( terms, solutions ):
+
+    def define_fun_to_string( f, params, body ):
+        sort = f.getSort()
+        if sort.isFunction():
+            sort = f.getSort().getFunctionCodomainSort()
+            result = ""
+            result += "(define-fun " + str( f ) + " ("
+            for param in params:
+                if i > 0:
+                    result += " "
+                else:
+                    result += "(" + str( param ) + " " + str( param.getSort() ) + ")"
+        result += ") " + str( sort ) + " " + str( body ) + ")"
+        return result
+
+
+    result = ""
+    for i, term in enumerate( terms ):
+        params = []
+        if solutions[ i ].getKind() == pycvc5.kinds.Lambda:
+            params += solutions[ i ][ 0 ]
+            body    = solutions[ i ][ 1 ]
+        result += "  " + define_fun_to_string( term, params, body ) + "\n"
+        print( result )
+
+    return
+
+
+####
+# verif_pp
+#
+# pretty print output of verification query
+#
+def verif_pp( info, unsat, model = None ):
+    ex = soidlib.symbols.true if info[ 'expect' ] else soidlib.symbols.false
+    eq = ( unsat == info[ 'expect' ] )
+
+    mark  = chr( int( '2713', 16 ) ) if eq else chr( int( '2717', 16 ) )
+    color = Fore.GREEN if eq else Fore.RED
+
+    print(
+        f'\n\t                                                                                                              '
+        f'\n\t{str(info[ "count" ]).zfill(7)}.  |  name: {info[ "name" ]}  |  type: verification                            '
+    )
+    print( info[ 'description' ] )
+    print(
+        f'\n\t                expect: {ex}  |  result: [{color}{mark}{Style.RESET_ALL}]                                     '
+        f'\n\t                                                                                                              '
+        f'\n\tconstraints:                                                                                                  '
+        f'\n\t                                                                                                              '
+    )
+
+    query_pp( 'phi',  info[ 'phi' ]() )
+    query_pp( 'psi',  info[ 'psi' ]() )
+    query_pp( 'beta', info[ 'beta' ]() )
+
+    if not unsat and model:
+        print(
+            f'\n\t                                                                                                          '
+            f'\n\tcounterexample:                                                                                           '
+            f'\n\t                                                                                                          '
+        )
+        model_pp( info[ 'E' ], info[ 'S' ], info[ 'P' ], model )
+
+    print(
+        f'\n\t                                                                                                              '
+    )
+
+
+####
+# scf_pp
+#
+# pretty print output of single counterfactual query
+#
+def scf_pp( info, sat, model = None ):
+    ex = soidlib.symbols.true if info[ 'expect' ] else soidlib.symbols.false
+    eq = ( sat == info[ 'expect' ] )
+
+    mark  = chr( int( '2713', 16 ) ) if eq else chr( int( '2717', 16 ) )
+    color = Fore.GREEN if eq else Fore.RED
+
+    print(
+        f'\n\t                                                                                                              '
+        f'\n\t{str(info[ "count" ]).zfill(7)}.  |  name: {info[ "name" ]}  |  type: counterfactual.single                   '
+    )
+    print( info[ 'description' ] )
+    print(
+        f'\n\t                expect: {ex}  |  result: [{color}{mark}{Style.RESET_ALL}]                                     '
+        f'\n\t                                                                                                              '
+        f'\n\tconstraints:                                                                                                  '
+        f'\n\t                                                                                                              '
+    )
+
+    query_pp( 'phi',  info[ 'phi' ]() )
+    query_pp( 'psi',  info[ 'psi' ]() )
+    query_pp( 'beta', info[ 'beta' ]() )
+
+    if sat and model:
+        print(
+            f'\n\t                                                                                                          '
+            f'\n\tcounterfactual                                                                                            '
+            f'\n\t                                                                                                          '
+        )
+        model_pp( info[ 'E' ], info[ 'S' ], info[ 'P' ], model )
+
+    print(
+        f'\n\t                                                                                                              '
+    )
+
+
 
 
 ####
@@ -1112,19 +1133,24 @@ def extract( qs, args, oracle, queue = [] ):
 
 
 
-if __name__ == '__main__':
+###########################
+##### MAIN INTERFACE ######
+###########################
+
+
+
+def invoke( make_path, query_path, enum = 100, variants = False ):
 
     oracle = Oracle()
-    args = parse_args()
 
-    path, fn = os.path.split( args.queries )
+    path, fn = os.path.split( query_path )
     sys.path.insert( 0, path )
     qs = importlib.import_module( fn )
 
     queries = extract( qs, args, oracle )
     queries.sort( key = lambda query: query.priority, reverse = True )
 
-    print( oracle.introduction + '\n\n' )
+    yield ( { 'type': soidlib.introduction, 'description': oracle.introduction }, None, None )
 
     idx = 0
     while queries:
@@ -1138,4 +1164,20 @@ if __name__ == '__main__':
         oracle.load( nxt )
         oracle.ld_agnt( args.make, args.variants, idx )
 
-        oracle.run()
+        yield oracle.run()
+
+
+if __name__ == '__main__':
+    args = parse_args()
+    outs = invoke( args.make, args.queries, args.enum, args.variants )
+
+    for ( info, res, models ) in outs:
+
+        if info[ 'type' ] == soidlib.introduction:
+            print( info[ 'description' ] + '\n\n' )
+
+        if info[ 'type' ] == soidlib.verification:
+            verif_pp( info, res, models[ 0 ] if models else None )
+
+        if info[ 'type' ] == soidlib.counterfactual.single:
+            scf_pp( info, res, models[ 0 ] if models else None )

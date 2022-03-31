@@ -78,7 +78,7 @@ $ source ./venv/bin/activate
 ```
 Then invoke the `soid` tool, specifying the source program makefile `-m` and the directory containing the python module with the queries `-qs`, e.g.,:
 ```
-$ ./soid/soid -vs -m ./examples/microwave/src/Makefile -qs ./examples/microwave/queries
+$ ./soid/soid.py -vs -m ./examples/microwave/src/Makefile -qs ./examples/microwave/queries
 ```
 will execute the microwave example.
 
