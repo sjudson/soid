@@ -288,7 +288,7 @@ class Oracle():
         self.P = None    # program vars
 
         self.phi  = None # environmental
-        self.psi = None # state
+        self.psi  = None # state
         self.pi   = None
         self.beta = None # behavior
 
@@ -297,6 +297,8 @@ class Oracle():
         self.obs_psi = None # state
 
         self.description = None
+
+        self.info = None
 
         return
 
