@@ -28,17 +28,17 @@ $ sudo apt-get install build-essential \
                        gcc-multilib \
                        g++-multilib \
                        z3 \
-                       clang-9 \
-                       llvm-9 \
-                       llvm-9-dev \
-                       llvm-9-tools \
+                       clang-11 \
+                       llvm-11 \
+                       llvm-11-dev \
+                       llvm-11-tools \
                        m4 \
                        bison \
                        flex \
                        bc \
                        libboost-dev \
                        unzip \
-                       
+
 ```
 or on MacOS, with [Homebrew](https://brew.sh/) installed
 ```shell
