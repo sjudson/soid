@@ -1,5 +1,35 @@
 #!/bin/bash
 
+SHORT=c
+LONG=with-cvc5
+OPTS=$(getopt -a -n install-deps --options $SHORT --longoptions $LONG -- "$@")
+
+cvc5=0
+
+while :
+do
+    case "$1" in
+        -c | --with-cvc5)
+            cvc5=1
+            break
+            ;;
+        --)
+            shift;
+            break
+            ;;
+        *)
+            shift;
+            ;;
+    esac
+done
+
+if [[ $cvc5 -eq 1 ]]
+then
+    echo "Building with cvc5."
+else
+    echo "Building without cvc5 (no synthesis support)."
+fi
+
 # setup virtualenv and python depts
 envd="venv"
 if [ -d './venv' ]
@@ -125,14 +155,17 @@ make -j2
 cd ../..
 
 # cvc5 and python bindings
-cd ./cvc5
-./configure.sh --python-bindings --auto-download -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())")  -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))")
-cd ./build
-make -j2
-cd ./src/api/python
-python setup.py install
+if [[ $cvc5 -eq 1 ]]
+then
+   cd ./cvc5
+   ./configure.sh --python-bindings --auto-download -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())")  -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))")
+   cd ./build
+   make -j2
+   cd ./src/api/python
+   python setup.py install
 
-cd ../../../../..
+   cd ../../../../..
+fi
 
 #llvm3.4 for klee-float
 

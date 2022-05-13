@@ -16,7 +16,7 @@ import types
 import functools
 
 import z3
-import pycvc5
+#import pycvc5
 
 
 ###
@@ -1181,5 +1181,13 @@ if __name__ == '__main__':
         if info[ 'type' ] == soidlib.verification:
             verif_pp( info, res, models[ 0 ] if models else None )
 
-        if info[ 'type' ] == soidlib.counterfactual.single:
-            scf_pp( info, res, models[ 0 ] if models else None )
+        try:
+            if 'pycvc5' not in globals():
+                print( '##################\n## IMPORTING CVC5 FOR SYNTHESIS #\n##################\n\n' )
+                import pycvc5
+
+            if info[ 'type' ] == soidlib.counterfactual.single:
+                scf_pp( info, res, models[ 0 ] if models else None )
+
+        except ModuleNotFoundError:
+            print( '##################\n## SKIPPING QUERY, NO SYNTHESIS SUPPORT #\n##################\n\n' )
