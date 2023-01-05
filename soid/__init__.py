@@ -1,3 +1,3 @@
-from .soid import invoke
+from .soid import Oracle, invoke
 
-__all__ = [ 'invoke' ]
+__all__ = [ 'Oracle', 'invoke' ]

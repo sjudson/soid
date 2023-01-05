@@ -1140,8 +1140,15 @@ def extract( qs, args, oracle, queue = [] ):
 ###########################
 
 
+def invoke( oracle, make, query ):
 
-def invoke( make_path, query_path, enum = 100, variants = False ):
+    oracle.load( query )
+    oracle.ld_agnt( make )
+
+    return oracle.run()
+
+
+def invoke_many( make_path, query_path, enum = 100, variants = False ):
 
     oracle = Oracle()
 
@@ -1164,14 +1171,14 @@ def invoke( make_path, query_path, enum = 100, variants = False ):
             continue
 
         oracle.load( nxt )
-        oracle.ld_agnt( args.make, args.variants, idx )
+        oracle.ld_agnt( make_path, variants, idx )
 
         yield oracle.run()
 
 
 if __name__ == '__main__':
     args = parse_args()
-    outs = invoke( args.make, args.queries, args.enum, args.variants )
+    outs = invoke_many( args.make, args.queries, args.enum, args.variants )
 
     for ( info, res, models ) in outs:
 

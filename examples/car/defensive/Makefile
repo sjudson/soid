@@ -24,7 +24,7 @@ symbolic:
 	$(cc) -Dsymbolic -I $(SOIDLIB) -I $(KLEE) -emit-llvm -c -g -O0 ./variants/learn.c -o - | $(opt) -mem2reg -simplifycfg -S -o $(BC4)
 	$(cc) -Dsymbolic -I $(SOIDLIB) -I $(KLEE) -emit-llvm -c -g -O0 ./variants/util.c -o - | $(opt) -mem2reg -simplifycfg -S -o $(BC5)
 ifndef SOID_QUERY
-	$(cc) -Dsymbolic -I $(SOIDLIB) -I $(KLEE) -emit-llvm -c -g -O0 ./variants/agent.c.1 -o - | $(opt) -mem2reg -simplifycfg -S -o $(BC6)
+	$(cc) -Dsymbolic -I $(SOIDLIB) -I $(KLEE) -emit-llvm -c -g -O0 ./variants/agent.counterfactual.single.2.c -o - | $(opt) -mem2reg -simplifycfg -S -o $(BC6)
 else
 	$(cc) -Dsymbolic -I $(SOIDLIB) -I $(KLEE) -emit-llvm -c -g -O0 ./variants/agent.$(SOID_QUERY).c -o - | $(opt) -mem2reg -simplifycfg -S -o $(BC6)
 endif
