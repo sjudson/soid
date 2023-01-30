@@ -14,6 +14,7 @@ import subprocess
 import importlib
 import types
 import functools
+import resource
 
 import z3
 #import pycvc5
@@ -138,7 +139,12 @@ class Oracle():
             nm   = self.type + '.' + f'{idx}'
             cmd += [ f'SOID_QUERY={nm}' ]
 
+
+        ust = resource.getrusage(resource.RUSAGE_CHILDREN)
         ret = subprocess.run( cmd, cwd = mdir )
+        ued = resource.getrusage(resource.RUSAGE_CHILDREN)
+        self.resources[ 'time' ][ 'symbolic' ]  = ued.ru_utime - ust.ru_utime
+
         klee_last = mdir + '/klee-last'
 
         i  = 1
@@ -299,6 +305,8 @@ class Oracle():
         self.description = None
 
         self.info = None
+
+        self.resources = { 'time': { 'symbolic': None, 'verification': None, 'total': None } }
 
         return
 
@@ -753,6 +761,7 @@ class Oracle():
     def run( self ):
         return self.runners[ self.type ]()  # todo: handle error case
 
+
     ####
     # verif
     #
@@ -765,7 +774,11 @@ class Oracle():
                     z3.And( self.phi(), self.psi(), self.pi() ),
                     self.beta() ) ) )
 
+        ust = resource.getrusage(resource.RUSAGE_SELF)
         unsat = ( self.solver.check() == z3.unsat )
+        ued = resource.getrusage(resource.RUSAGE_SELF)
+        self.resources[ 'time' ][ 'verification' ]  = ued.ru_utime - ust.ru_utime
+
         if unsat:
             return ( self.info, unsat, None )
 
@@ -790,7 +803,11 @@ class Oracle():
                     z3.And( self.phi(), self.psi(), self.pi() ),
                     self.beta() ) ) )
 
+        ust = resource.getrusage(resource.RUSAGE_SELF)
         unsat = ( self.solver.check() == z3.unsat )
+        ued = resource.getrusage(resource.RUSAGE_SELF)
+        self.resources[ 'time' ][ 'verification' ]  = ued.ru_utime - ust.ru_utime
+
         if unsat:
             return ( self.info, not unsat, None )
 
@@ -1000,7 +1017,7 @@ def synthd_pp( terms, solutions ):
 #
 # pretty print output of verification query
 #
-def verif_pp( info, unsat, model = None ):
+def verif_pp( info, unsat, model = None, resources = None ):
     ex = soidlib.symbols.true if info[ 'expect' ] else soidlib.symbols.false
     eq = ( unsat == info[ 'expect' ] )
 
@@ -1014,6 +1031,10 @@ def verif_pp( info, unsat, model = None ):
     print( info[ 'description' ] )
     print(
         f'\n\t                expect: {ex}  |  result: [{color}{mark}{Style.RESET_ALL}]                                     '
+        f'\n\t                                                                                                              '
+        f'\n\t                time: {resources[ "time" ][ "total" ]:.2f}s total                                             '
+        f'\n\t                time: {resources[ "time" ][ "symbolic" ]:.2f}s on symbolic execution                          '
+        f'\n\t                time: {resources[ "time" ][ "verification" ]:.2f}s on query evaluation                        '
         f'\n\t                                                                                                              '
         f'\n\tconstraints:                                                                                                  '
         f'\n\t                                                                                                              '
@@ -1041,7 +1062,7 @@ def verif_pp( info, unsat, model = None ):
 #
 # pretty print output of single counterfactual query
 #
-def scf_pp( info, sat, model = None ):
+def scf_pp( info, sat, model = None, resources = None ):
     ex = soidlib.symbols.true if info[ 'expect' ] else soidlib.symbols.false
     eq = ( sat == info[ 'expect' ] )
 
@@ -1055,6 +1076,10 @@ def scf_pp( info, sat, model = None ):
     print( info[ 'description' ] )
     print(
         f'\n\t                expect: {ex}  |  result: [{color}{mark}{Style.RESET_ALL}]                                     '
+        f'\n\t                                                                                                              '
+        f'\n\t                time: {resources[ "time" ][ "total" ]:.2f}s total                                             '
+        f'\n\t                time: {resources[ "time" ][ "symbolic" ]:.2f}s on symbolic execution                          '
+        f'\n\t                time: {resources[ "time" ][ "verification" ]:.2f}s on query evaluation                        '
         f'\n\t                                                                                                              '
         f'\n\tconstraints:                                                                                                  '
         f'\n\t                                                                                                              '
@@ -1142,10 +1167,15 @@ def extract( qs, args, oracle, queue = [] ):
 
 def invoke( oracle, make, query ):
 
+    ust = resource.getrusage(resource.RUSAGE_SELF)
     oracle.load( query )
     oracle.ld_agnt( make )
 
-    return oracle.run()
+    ret = oracle.run()
+    ued = resource.getrusage(resource.RUSAGE_SELF)
+    oracle.resources[ 'time' ][ 'total' ]  = ued.ru_utime - ust.ru_utime
+
+    return (ret[ 0 ], ret[ 1 ], ret[ 2 ], oracle.resources)
 
 
 def invoke_many( make_path, query_path, enum = 100, variants = False ):
@@ -1159,7 +1189,7 @@ def invoke_many( make_path, query_path, enum = 100, variants = False ):
     queries = extract( qs, args, oracle )
     queries.sort( key = lambda query: query.priority, reverse = True )
 
-    yield ( { 'type': soidlib.introduction, 'description': oracle.introduction }, None, None )
+    yield ( { 'type': soidlib.introduction, 'description': oracle.introduction }, None, None, None )
 
     idx = 0
     while queries:
@@ -1170,28 +1200,35 @@ def invoke_many( make_path, query_path, enum = 100, variants = False ):
         if nxt.skip:
             continue
 
+        usts = resource.getrusage(resource.RUSAGE_SELF)
+        ustc = resource.getrusage(resource.RUSAGE_CHILDREN)
         oracle.load( nxt )
         oracle.ld_agnt( make_path, variants, idx )
 
-        yield oracle.run()
+        ret = oracle.run()
+        ueds = resource.getrusage(resource.RUSAGE_SELF)
+        uedc = resource.getrusage(resource.RUSAGE_CHILDREN)
+        oracle.resources[ 'time' ][ 'total' ]  = ( ueds.ru_utime - usts.ru_utime ) + ( uedc.ru_utime - ustc.ru_utime )
+
+        yield (ret[ 0 ], ret[ 1 ], ret[ 2 ], oracle.resources)
 
 
 if __name__ == '__main__':
     args = parse_args()
     outs = invoke_many( args.make, args.queries, args.enum, args.variants )
 
-    for ( info, res, models ) in outs:
+    for ( info, res, models, resources ) in outs:
 
         if info[ 'type' ] == soidlib.introduction:
             print( info[ 'description' ] + '\n\n' )
             continue
 
         if info[ 'type' ] == soidlib.verification:
-            verif_pp( info, res, models[ 0 ] if models else None )
+            verif_pp( info, res, models[ 0 ] if models else None, resources )
             continue
 
         if info[ 'type' ] == soidlib.counterfactual.single:
-            scf_pp( info, res, models[ 0 ] if models else None )
+            scf_pp( info, res, models[ 0 ] if models else None, resources )
             continue
 
         try:
