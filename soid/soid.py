@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from colorama import Fore, Style
 from collections import namedtuple
