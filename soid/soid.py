@@ -125,7 +125,7 @@ class Oracle():
     #
     # invokes KLEE to load agent constraints
     #
-    def ld_agnt( self, makefile, variants, idx ):
+    def ld_agnt( self, makefile, variants = None, idx = None ):
         mdir, _ = os.path.split( makefile )
 
         print( '##################\n## INVOKING KLEE #\n##################\n\n' )
@@ -136,7 +136,6 @@ class Oracle():
         if variants:
             nm   = self.type + '.' + f'{idx}'
             cmd += [ f'SOID_QUERY={nm}' ]
-
 
         ust = resource.getrusage(resource.RUSAGE_CHILDREN)
         ret = subprocess.run( cmd, cwd = mdir )

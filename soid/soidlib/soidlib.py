@@ -173,7 +173,7 @@ def _fbool( val ):
 # declare constant float
 #
 def _cfloat( x ):
-    return z3.FPVal( x )
+    return z3.FPVal( x, z3.Float32() )
 
 
 ####
@@ -183,6 +183,15 @@ def _cfloat( x ):
 #
 def _float( x ):
     return z3.FP( x, z3.Float32() )
+
+
+####
+# _cdouble
+#
+# declare constant double
+#
+def _cdouble( x ):
+    return z3.FPVal( x )
 
 
 ####
@@ -206,8 +215,8 @@ def _fp( decl ):
             rv = raw if raw else v
 
             if isinstance( v, str ):
-                if val:                                               # named constant
-                    var = _cfloat( val )
+                if val:
+                    var = _cfloat( val )                              # named constant
                 else:
                     var = _float( rv )                                # named variable
             elif isinstance( v, float ):
@@ -233,12 +242,12 @@ def _fp( decl ):
             rv = raw if raw else v
 
             if isinstance( v, str ):
-                if val:                                               # named constant
-                    var = _cfloat( val )
+                if val:
+                    var = _cdouble( val )                             # named constant
                 else:
                     var = _double( rv )                               # named variable
             elif isinstance( v, double ):
-                    var = _cfloat( v )                                # anonymous constant
+                    var = _cdouble( v )                               # anonymous constant
 
             else:
                 pass # todo: handle
@@ -279,7 +288,8 @@ def _type_resolve( args ):
 
         elif isinstance( arg, float ):
             sargs[ i ] = f'{arg:.8f}'
-            largs[ i ] = _cfloat( arg )
+            oarg = largs[ 1 - i ]
+            largs[ i ] = _cdouble( arg ) if oarg.soid_isdbl else _cfloat( arg )
 
         elif isinstance( arg, z3.z3.BoolRef ):
             if hasattr( arg, 'soid_pp' ):
@@ -577,6 +587,9 @@ class Decl():
         self.__soid__iter__i += 1
 
         return nxt
+
+    def __getitem__(self, item):
+        return getattr(self, item)
 
 
 ####
