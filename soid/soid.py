@@ -3,8 +3,6 @@
 from colorama import Fore, Style
 from collections import namedtuple
 
-import soidlib
-
 import os
 import os.path
 import re
@@ -234,7 +232,7 @@ class Oracle():
 
             for vl in varlist:
                 if str( v ) == re.sub( r'_ackermann![0-9]+', '', str( vl ) ):
-                    if v.soid_isflt or v.soid_isdbl:                        
+                    if v.soid_isflt or v.soid_isdbl:
                         return ( z3.fpToIEEEBV( v ) == vl )
                     else:
                         return ( v == vl )
@@ -955,7 +953,7 @@ def model_recurse( expr, tier = 3 ):
     elif z3.is_fp( expr ):
         return expr
 
-    
+
 ####
 # model_pp
 #
@@ -1255,6 +1253,8 @@ def invoke_many( make_path, query_path, enum = 100, variants = False ):
 
 
 if __name__ == '__main__':
+    import soidlib
+
     args = parse_args()
     outs = invoke_many( args.make, args.queries, args.enum, args.variants )
 
@@ -1279,3 +1279,6 @@ if __name__ == '__main__':
 
         except ModuleNotFoundError:
             print( '##################\n## SKIPPING QUERY, NO SYNTHESIS SUPPORT #\n##################\n\n' )
+
+else:
+    from . import soidlib
