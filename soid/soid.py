@@ -278,7 +278,7 @@ class Oracle():
 
         query._Soid__declare()
         self.description = ''
-        if query._Soid__descriptor():
+        if hasattr( query, '_Soid_descriptor' ):
             self.description = query._Soid__descriptor()
 
         self.expect = query.expect
