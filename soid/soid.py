@@ -189,16 +189,34 @@ class Oracle():
             if p.soid_isbv:
                 v = soidlib.types.util.bv32bv( '__soid__' + str( p ) )
                 setattr( v, 'soid_isbv', True )
+                setattr( v, 'soid_isflt', False )
+                setattr( v, 'soid_isdbl', False )
+                return v
+
+            if p.soid_isflt:
+                v = soidlib.types.util.float( '__soid__' + str( p ) )
+                setattr( v, 'soid_isbv', False )
+                setattr( v, 'soid_isflt', True )
+                setattr( v, 'soid_isdbl', False )
+                return v
+
+            if p.soid_isdbl:
+                v = soidlib.types.util.double( '__soid__' + str( p ) )
+                setattr( v, 'soid_isbv', False )
+                setattr( v, 'soid_isflt', False )
+                setattr( v, 'soid_isdbl', True )
                 return v
 
             v = soidlib.types.util.bv32arr( '__soid__' + str( p ) )
             setattr( v, 'soid_isbv', False )
+            setattr( v, 'soid_isflt', False )
+            setattr( v, 'soid_isdbl', False )
             return v
 
         symbls = [ create( p ) for p in self.P ]
 
         def cast( i, p ):
-            if p.soid_isbv:
+            if p.soid_isbv or p.soid_isflt or p.soid_isdbl:
                 return ( p == symbls[ i ] )
             return soidlib.types.util.bv32arr_to_bv32( p ) == soidlib.types.util.bv32arr_to_bv32( symbls[ i ] )
 
@@ -211,16 +229,28 @@ class Oracle():
         varlist = list( varset )
 
         def bind( v ):
-            if not v.soid_isbv:
+            if not v.soid_isbv and not v.soid_isflt and not v.soid_isdbl:
                 return True
 
             for vl in varlist:
                 if str( v ) == re.sub( r'_ackermann![0-9]+', '', str( vl ) ):
-                    return ( v == vl )
+                    if v.soid_isflt or v.soid_isdbl:                        
+                        return ( z3.fpToIEEEBV( v ) == vl )
+                    else:
+                        return ( v == vl )
 
             return True
 
-        amends += [ bind( e ) for e in self.E ] + [ bind( s ) for s in self.S ] + [ bind( p ) for p in self.P ] + [ bind( s ) for s in symbls ]
+        if self.E:
+            amends += [ bind( e ) for e in self.E ]
+
+        if self.S:
+            amends += [ bind( s ) for s in self.S ]
+
+        if self.P:
+            amends += [ bind( p ) for p in self.P ]
+
+        amends += [ bind( s ) for s in symbls ]
         amended = [ z3.And( [ path ] + amends ) for path in self.paths ]
 
         def __inner():
@@ -784,7 +814,7 @@ class Oracle():
 
         model = self.solver.model()
 
-        for var in list( self.E ) + list( self.S ) + list( self.P ):
+        for var in (list( self.E ) if self.E else []) + (list( self.S ) if self.S else []) + (list( self.P ) if self.P else []):
             model.eval( var, model_completion = True )
 
         return ( self.info, unsat, [ model ] )
@@ -813,7 +843,7 @@ class Oracle():
 
         model = self.solver.model()
 
-        for var in list( self.E ) + list( self.S ) + list( self.P ):
+        for var in (list( self.E ) if self.E else []) + (list( self.S ) if self.S else []) + (list( self.P ) if self.P else []):
             model.eval( var, model_completion = True )
 
         return ( self.info, not unsat, [ model ] )
@@ -922,6 +952,10 @@ def model_recurse( expr, tier = 3 ):
     elif z3.is_bv( expr ):
         return expr.as_long()
 
+    elif z3.is_fp( expr ):
+        return expr
+
+    
 ####
 # model_pp
 #
@@ -937,8 +971,15 @@ def model_pp( E, S, P, model ):
         val   = model_recurse( model[ v ] )
 
         # sometimes there are other vars that aren't in the decls, e.g., xxx_ackermann!xx, so ignore them
+        refs  = []
+        if E:
+            refs += [ vr for vr in E if str( vr ) == v.name() ]
+        if S:
+            refs += [ vr for vr in S if str( vr ) == v.name() ]
+        if P:
+            refs += [ vr for vr in P if str( vr ) == v.name() ]
         try:
-            ref = ([ vr for vr in E if str( vr ) == v.name() ] + [ vr for vr in S if str( vr ) == v.name() ] + [ vr for vr in P if str( vr ) == v.name() ] ).pop()
+            ref = refs.pop()
         except:
             continue
         btype = ref.soid_base
@@ -956,11 +997,11 @@ def model_pp( E, S, P, model ):
         if hasattr( ref, 'soid_val_pp' ) and val in ref.soid_val_pp:
             val = ref.soid_val_pp[ val ]
 
-        if ref in E:
+        if E and ref in E:
             Es.append((name, val))
-        if ref in S:
+        if S and ref in S:
             Ss.append((name, val))
-        if ref in P:
+        if P and ref in P:
             Ps.append((name, val))
 
     nl = max( [ len( name[0] ) for name in Es + Ss + Ps ] )
