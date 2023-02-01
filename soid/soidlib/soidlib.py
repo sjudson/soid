@@ -527,6 +527,15 @@ class Soid():
 
 
     ####
+    # declare
+    #
+    # register declare function
+    #
+    def declare( self, f ):
+        self.__reg_decl( f )
+
+        
+    ####
     # description
     #
     # register description function
