@@ -277,7 +277,9 @@ class Oracle():
         self.solver = z3.Solver() if not self.synth else pycvc5.Solver()
 
         query._Soid__declare()
-        self.description = query._Soid__descriptor()
+        self.description = ''
+        if query._Soid__descriptor():
+            self.description = query._Soid__descriptor()
 
         self.expect = query.expect
 
