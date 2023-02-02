@@ -93,6 +93,26 @@ class Oracle():
 
 
     ####
+    # ld_f
+    #
+    # loads falsified constraints registered through soidlib
+    #
+    def ld_f( self, query ):
+
+        ret = None
+        if hasattr( query, '_Soid__f' ):
+            ret = query._Soid__f( self.E, self.S )
+        else:
+            ret = z3.Bool( False )
+
+        def __inner():
+            return ret
+
+        self.f = lambda: __inner()
+        return
+
+
+    ####
     # ld_bhv
     #
     # loads behavioral constraints registered through soidlib
@@ -289,6 +309,7 @@ class Oracle():
 
         self.ld_env( query )
         self.ld_st( query )
+        self.ld_f( query )
         self.ld_bhv( query )
 
         self.info = {
@@ -306,6 +327,7 @@ class Oracle():
             'psi':         self.psi,
             'obs_phi':     self.obs_phi,
             'obs_psi':     self.obs_psi,
+            'f':           self.f,
             'pi':          self.pi,
             'beta':        self.beta,
         }
@@ -329,12 +351,13 @@ class Oracle():
 
         self.phi  = None # environmental
         self.psi  = None # state
-        self.pi   = None
+        self.pi   = None # agent
+        self.f    = None # falsified
         self.beta = None # behavior
 
         # observed, optional for pretty printing counterfactuals
         self.obs_phi  = None # environmental
-        self.obs_psi = None # state
+        self.obs_psi = None  # state
 
         self.description = None
 
@@ -805,7 +828,7 @@ class Oracle():
         self.solver.add(
             z3.Not(
                 z3.Implies(
-                    z3.And( self.phi(), self.psi(), self.pi() ),
+                    z3.And( self.phi(), self.psi(), z3.Not( self.f() ), self.pi() ),
                     self.beta() ) ) )
 
         ust = resource.getrusage(resource.RUSAGE_SELF)
@@ -832,9 +855,9 @@ class Oracle():
     def scf( self ):
         self.solver.add(
             z3.And(
-                z3.And( self.phi(), self.psi(), self.pi() ),
+                z3.And( self.phi(), self.psi(), z3.Not( self.f() ), self.pi() ),
                 z3.Implies(
-                    z3.And( self.phi(), self.psi(), self.pi() ),
+                    z3.And( self.phi(), self.psi(), z3.Not( self.f() ), self.pi() ),
                     self.beta() ) ) )
 
         ust = resource.getrusage(resource.RUSAGE_SELF)

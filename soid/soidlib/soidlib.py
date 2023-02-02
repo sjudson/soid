@@ -615,6 +615,7 @@ class Soid():
             'declare'       : self.__reg_decl,
             'environmental' : self.__reg_env,
             'state'         : self.__reg_st,
+            'falsified'     : self.__reg_f,
             'behavior'      : self.__reg_bhv,
         }
 
@@ -739,6 +740,20 @@ class Soid():
 
 
     ####
+    # __reg_f
+    #
+    # decorator whose inner loads query falsified constraints
+    #
+    def __reg_f( self, f ):
+        def __inner( *args, **kwargs ):
+            eqn = f( *args, **kwargs )
+            if isinstance( eqn, bool ):
+                eqn = _fbool( eqn )
+
+        self.__falsified = __inner
+
+
+    ####
     # __reg_bhv
     #
     # decorator whose inner loads query behavior constraints
@@ -799,6 +814,15 @@ class Soid():
     # state
     #
     # register state constraints function
+    #
+    def state( self, f ):
+        self.__reg_st( f )
+
+
+    ####
+    # falsified
+    #
+    # register falsified constraints function
     #
     def state( self, f ):
         self.__reg_st( f )
