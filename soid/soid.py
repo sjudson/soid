@@ -154,11 +154,14 @@ class Oracle():
             fs.append( fn )
             i += 1
 
+        if not fs:
+            raise Exception('Unable to find symbolic execution output')
+
         paths = []
         for f in fs:
             path_components = z3.parse_smt2_file( f )
             if not path_components:
-                raise Exception('Unable to parse symbolic execution output, check your permissions')
+                raise Exception('Unable to parse symbolic execution output')
             if len( path_components ) == 1:
                 paths.append( path_components[ 0 ] )
                 break
