@@ -209,7 +209,10 @@ class Oracle():
 
         def create( p ):
             if p.soid_isbv:
-                v = soidlib.types.util.bv32bv( '__soid__' + str( p ) )
+                if not p.soid_base == 'bool':
+                    v = soidlib.types.util.bv32bv( '__soid__' + str( p ) )
+                else:
+                    v = soidlib.types.util.bv8bv( '__soid__' + str( p ) )
                 setattr( v, 'soid_isbv', True )
                 setattr( v, 'soid_isflt', False )
                 setattr( v, 'soid_isdbl', False )
@@ -229,10 +232,15 @@ class Oracle():
                 setattr( v, 'soid_isdbl', True )
                 return v
 
-            v = soidlib.types.util.bv32arr( '__soid__' + str( p ) )
+            if not p.soid_base == 'bool':
+                v = soidlib.types.util.bv32arr( '__soid__' + str( p ) )
+            else:
+                v = soidlib.types.util.bv8arr( '__soid__' + str( p ) )
+
             setattr( v, 'soid_isbv', False )
             setattr( v, 'soid_isflt', False )
             setattr( v, 'soid_isdbl', False )
+
             return v
 
         symbls = [ create( p ) for p in self.P ]
@@ -240,7 +248,9 @@ class Oracle():
         def cast( i, p ):
             if p.soid_isbv or p.soid_isflt or p.soid_isdbl:
                 return ( p == symbls[ i ] )
-            return soidlib.types.util.bv32arr_to_bv32( p ) == soidlib.types.util.bv32arr_to_bv32( symbls[ i ] )
+            if not p.soid_base == 'bool':
+                return soidlib.types.util.bv32arr_to_bv32( p ) == soidlib.types.util.bv32arr_to_bv32( symbls[ i ] )
+            return soidlib.types.util.bv8arr_to_bv8( p ) == soidlib.types.util.bv8arr_to_bv8( symbls[ i ] )
 
         amends = [ cast( i, p ) for i, p in enumerate( self.P ) ]
 

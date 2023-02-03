@@ -27,6 +27,8 @@ agent          = 'agent'
 ######################
 
 
+
+
 ####
 # _bv32arr
 #
@@ -34,6 +36,15 @@ agent          = 'agent'
 #
 def _bv32arr( x ):
     return z3.Array( x, z3.BitVecSort( 32 ), z3.BitVecSort( 8 ) )
+
+
+####
+# _bv8arr
+#
+# convert int variable to (Array (_ BitVec 32) (_ BitVec 1))
+#
+def _bv8arr( x ):
+    return z3.Array( x, z3.BitVecSort( 32 ), z3.BitVecSort( 1 ) )
 
 
 ####
@@ -46,21 +57,30 @@ def _bv32bv( x ):
 
 
 ####
+# _bv8bv
+#
+# convert bool variable to (_ BitVec 8)
+#
+def _bv8bv( x ):
+    return z3.BitVec( x, 8 )
+
+
+####
 # _cint_to_bv32arr
 #
 # convert constant int to (Array (_ BitVec 32) (_ BitVec 8))
 #
 def _cint_to_bv32( x ):
-    return z3.BitVecVal( 1 * x, 32 )   # implicit bool conversion
+    return z3.BitVecVal( 1 * x, 32 )
 
 
 ####
-# _cbool_to_bv32arr
+# _cbool_to_bv8arr
 #
 # convert constant bool to (Array (_ BitVec 32) (_ BitVec 8))
 #
-def _cbool_to_bv32( x ):
-    return _cint_to_bv32( x )
+def _cbool_to_bv8( x ):
+    return z3.BitVecVal( 1 * x, 8 )
 
 
 ####
@@ -76,6 +96,15 @@ def _bv32arr_to_bv32( x ):
 
 
 ####
+# _bv8arr_to_bv8
+#
+# convert (Array (_ BitVec 32) (_ BitVec 1)) to (_ BitVec 8)
+#
+def _bv8arr_to_bv8( x ):
+    return z3.Select( x, z3.BitVecVal( 0, 32 ) )
+
+
+####
 # _bv32
 #
 # parse declaration of int or bool and turn into z3 expression
@@ -88,9 +117,9 @@ def _bv32( decl, as_bv = False ):
 
             if isinstance( v, str ):
                 if val:
-                    var = _cbool_to_bv32( val )                        # named constant
+                    var = _cbool_to_bv8( val )                         # named constant
                 else:
-                    var = _bv32bv( rv ) if as_bv else _bv32arr( rv )   # named variable
+                    var = _bv8bv( rv ) if as_bv else _bv8arr( rv )     # named variable
                 setattr( var, 'soid_pp', str( v ) )
                 setattr( var, 'soid_base', 'bool' )
                 setattr( var, 'soid_isbv', as_bv )
@@ -102,7 +131,7 @@ def _bv32( decl, as_bv = False ):
                 return var
 
             elif isinstance( v, bool ):
-                var = _cbool_to_bv32( v )                              # anonymous constant
+                var = _cbool_to_bv8( v )                               # anonymous constant
                 setattr( var, 'soid_pp', str( v ) )
                 setattr( var, 'soid_base', 'bool' )
                 setattr( var, 'soid_isbv', as_bv )
@@ -280,7 +309,7 @@ def _type_resolve( args ):
 
         if isinstance( arg, bool ):
             sargs[ i ] = symbols.true if arg else symbols.false
-            largs[ i ] = _cbool_to_bv32( arg )
+            largs[ i ] = _cbool_to_bv8( arg )
 
         elif isinstance( arg, int ):
             sargs[ i ] = str( arg )
@@ -328,8 +357,8 @@ def _type_resolve( args ):
     return tuple( largs ), tuple( sargs )
 
 
-_tyu    = namedtuple( 'tyutil', [ 'bv32arr', 'bv32bv', 'int_to_bv32', 'bool_to_bv32', 'bv32arr_to_bv32', 'float', 'double' ] )
-_tyutil = _tyu( bv32arr = _bv32arr, bv32bv = _bv32bv, int_to_bv32 = _cint_to_bv32, bool_to_bv32 = _cbool_to_bv32, bv32arr_to_bv32 = _bv32arr_to_bv32, float = _float, double = _double )
+_tyu    = namedtuple( 'tyutil', [ 'bv32arr', 'bv8arr', 'bv32bv', 'bv8bv', 'int_to_bv32', 'bool_to_bv8', 'bv32arr_to_bv32', 'bv8arr_to_bv8', 'float', 'double' ] )
+_tyutil = _tyu( bv32arr = _bv32arr, bv8arr = _bv8arr, bv32bv = _bv32bv, bv8bv = _bv8bv, int_to_bv32 = _cint_to_bv32, bool_to_bv8 = _cbool_to_bv8, bv32arr_to_bv32 = _bv32arr_to_bv32, bv8arr_to_bv8 = _bv8arr_to_bv8, float = _float, double = _double )
 
 _ty     = namedtuple( 'types', [ 'bool', 'int', 'u32', 'bool_bv', 'int_bv', 'u32_bv', 'float', 'double', 'util' ] )
 types   = _ty( bool = _bv32( 'bool' ), int = _bv32( 'int' ), u32 = _bv32( 'u32' ), bool_bv = _bv32( 'bool', True ), int_bv = _bv32( 'int', True ), u32_bv = _bv32( 'u32', True ), float = _fp( 'float'), double = _fp( 'double' ), util = _tyutil )
