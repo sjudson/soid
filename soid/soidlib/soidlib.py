@@ -107,79 +107,87 @@ def _bv8arr_to_bv8( x ):
 ####
 # _bv32
 #
-# parse declaration of int or bool and turn into z3 expression
+# parse declaration of int and turn into z3 expression
 #
-def _bv32( decl, as_bv = False ):
+def _bv32( decl, as_bv = False, is_bool = False ):
+    def __inner( v, val = None, pp = None, raw = None ):
+        rv = raw if raw else v
 
-    if decl == 'bool':
-        def __inner( v, val = None, pp = None, raw = None ):
-            rv = raw if raw else v
-
-            if isinstance( v, str ):
-                if val:
-                    var = _cbool_to_bv8( val )                         # named constant
-                else:
-                    var = _bv8bv( rv ) if as_bv else _bv8arr( rv )     # named variable
-                setattr( var, 'soid_pp', str( v ) )
-                setattr( var, 'soid_base', 'bool' )
-                setattr( var, 'soid_isbv', as_bv )
-                setattr( var, 'soid_isflt', False )
-                setattr( var, 'soid_isdbl', False )
-
-                if pp:
-                    setattr( var, 'soid_val_pp', pp )
-                return var
-
-            elif isinstance( v, bool ):
-                var = _cbool_to_bv8( v )                               # anonymous constant
-                setattr( var, 'soid_pp', str( v ) )
-                setattr( var, 'soid_base', 'bool' )
-                setattr( var, 'soid_isbv', as_bv )
-                setattr( var, 'soid_isflt', False )
-                setattr( var, 'soid_isdbl', False )
-
-                if pp:
-                    setattr( var, 'soid_val_pp', pp )
-                return var
-
+        if isinstance( v, str ):
+            if val:                                               # named constant
+                var = _cint_to_bv32( val )
             else:
-                pass # todo: handle
-        return __inner
+                var = _bv32bv( rv ) if as_bv else _bv32arr( rv )  # named variable
+            setattr( var, 'soid_pp', str( v ) )
+            setattr( var, 'soid_base', 'u32' )
+            setattr( var, 'soid_isbool', is_bool )
+            setattr( var, 'soid_isbv', as_bv )
+            setattr( var, 'soid_isflt', False )
+            setattr( var, 'soid_isdbl', False )
 
-    if decl == 'int' or decl == 'u32':
-        def __inner( v, val = None, pp = None, raw = None ):
-            rv = raw if raw else v
+            if pp:
+                setattr( var, 'soid_val_pp', pp )
+            return var
 
-            if isinstance( v, str ):
-                if val:                                               # named constant
-                    var = _cint_to_bv32( val )
-                else:
-                    var = _bv32bv( rv ) if as_bv else _bv32arr( rv )  # named variable
-                setattr( var, 'soid_pp', str( v ) )
-                setattr( var, 'soid_base', 'u32' )
-                setattr( var, 'soid_isbv', as_bv )
-                setattr( var, 'soid_isflt', False )
-                setattr( var, 'soid_isdbl', False )
+        elif isinstance( v, bool ):
+            var = _cint_to_bv32( v )                              # anonymous constant
+            setattr( var, 'soid_pp', str( v ) )
+            setattr( var, 'soid_base', 'u32' )
+            setattr( var, 'soid_isbool', is_bool )
+            setattr( var, 'soid_isbv', as_bv )
+            setattr( var, 'soid_isflt', False )
+            setattr( var, 'soid_isdbl', False )
 
-                if pp:
-                    setattr( var, 'soid_val_pp', pp )
-                return var
+            if pp:
+                setattr( var, 'soid_val_pp', pp )
+            return var
 
-            elif isinstance( v, bool ):
-                var = _cint_to_bv32( v )                              # anonymous constant
-                setattr( var, 'soid_pp', str( v ) )
-                setattr( var, 'soid_base', 'u32' )
-                setattr( var, 'soid_isbv', as_bv )
-                setattr( var, 'soid_isflt', False )
-                setattr( var, 'soid_isdbl', False )
+        else:
+            pass # todo: handle
+    return __inner
 
-                if pp:
-                    setattr( var, 'soid_val_pp', pp )
-                return var
 
+####
+# _bv8
+#
+# parse declaration of bool and turn into z3 expression
+#
+def _bv8( decl, as_bv = False ):
+    def __inner( v, val = None, pp = None, raw = None ):
+        rv = raw if raw else v
+
+        if isinstance( v, str ):
+            if val:
+                var = _cbool_to_bv8( val )                         # named constant
             else:
-                pass # todo: handle
-        return __inner
+                var = _bv8bv( rv ) if as_bv else _bv8arr( rv )     # named variable
+            setattr( var, 'soid_pp', str( v ) )
+            setattr( var, 'soid_base', 'bool' )
+            setattr( var, 'soid_isbv', as_bv )
+            setattr( var, 'soid_isbool', True )
+            setattr( var, 'soid_isflt', False )
+            setattr( var, 'soid_isdbl', False )
+
+            if pp:
+                setattr( var, 'soid_val_pp', pp )
+            return var
+
+        elif isinstance( v, bool ):
+            var = _cbool_to_bv8( v )                               # anonymous constant
+            setattr( var, 'soid_pp', str( v ) )
+            setattr( var, 'soid_base', 'bool' )
+            setattr( var, 'soid_isbv', as_bv )
+            setattr( var, 'soid_isbool', True )
+            setattr( var, 'soid_isflt', False )
+            setattr( var, 'soid_isdbl', False )
+
+            if pp:
+                setattr( var, 'soid_val_pp', pp )
+            return var
+
+        else:
+            pass # todo: handle
+    return __inner
 
 
 ####
@@ -190,6 +198,7 @@ def _bv32( decl, as_bv = False ):
 def _fbool( val ):
     var = z3.BoolVal( val )
     setattr( var, 'soid_isbv', False )
+    setattr( var, 'soid_isbool', True )
     setattr( var, 'soid_isflt', False )
     setattr( var, 'soid_isdbl', False )
     setattr( var, 'soid_pp', symbols.true if val else symbols.false )
@@ -309,7 +318,8 @@ def _type_resolve( args ):
 
         if isinstance( arg, bool ):
             sargs[ i ] = symbols.true if arg else symbols.false
-            largs[ i ] = _cbool_to_bv8( arg )
+            oarg = largs[ 1 - i ]
+            largs[ i ] = _cint_to_bv32( arg ) if hasattr( oarg, 'soid_base' ) and not oarg.soid_base == 'bool' else _cbool_to_bv8( arg )
 
         elif isinstance( arg, int ):
             sargs[ i ] = str( arg )
@@ -358,10 +368,37 @@ def _type_resolve( args ):
 
 
 _tyu    = namedtuple( 'tyutil', [ 'bv32arr', 'bv8arr', 'bv32bv', 'bv8bv', 'int_to_bv32', 'bool_to_bv8', 'bv32arr_to_bv32', 'bv8arr_to_bv8', 'float', 'double' ] )
-_tyutil = _tyu( bv32arr = _bv32arr, bv8arr = _bv8arr, bv32bv = _bv32bv, bv8bv = _bv8bv, int_to_bv32 = _cint_to_bv32, bool_to_bv8 = _cbool_to_bv8, bv32arr_to_bv32 = _bv32arr_to_bv32, bv8arr_to_bv8 = _bv8arr_to_bv8, float = _float, double = _double )
+_tyutil = _tyu( bv32arr = _bv32arr,
+                bv8arr = _bv8arr,
 
-_ty     = namedtuple( 'types', [ 'bool', 'int', 'u32', 'bool_bv', 'int_bv', 'u32_bv', 'float', 'double', 'util' ] )
-types   = _ty( bool = _bv32( 'bool' ), int = _bv32( 'int' ), u32 = _bv32( 'u32' ), bool_bv = _bv32( 'bool', True ), int_bv = _bv32( 'int', True ), u32_bv = _bv32( 'u32', True ), float = _fp( 'float'), double = _fp( 'double' ), util = _tyutil )
+                bv32bv = _bv32bv,
+                bv8bv = _bv8bv,
+
+                int_to_bv32 = _cint_to_bv32,
+                bool_to_bv8 = _cbool_to_bv8,
+
+                bv32arr_to_bv32 = _bv32arr_to_bv32,
+                bv8arr_to_bv8 = _bv8arr_to_bv8,
+
+                float = _float,
+                double = _double )
+
+_ty     = namedtuple( 'types', [ 'bool', 'int', 'u32', 'bool_as_int', 'bool_as_u32', 'bool_bv', 'int_bv', 'u32_bv', 'bool_as_int_bv', 'bool_as_u32_bv', 'float', 'double', 'util' ] )
+types   = _ty( bool = _bv8( 'bool' ),
+               int = _bv32( 'int' ),
+               u32 = _bv32( 'u32' ),
+               bool_as_int = _bv32( 'int', False, True ),
+               bool_as_u32 = _bv32( 'u32', False, True ),
+
+               bool_bv = _bv8( 'bool', True ),
+               int_bv = _bv32( 'int', True ),
+               u32_bv = _bv32( 'u32', True ),
+               bool_as_int_bv = _bv32( 'int', True, True ),
+               bool_as_u32_bv = _bv32( 'u32', True, True ),
+
+               float = _fp( 'float'),
+               double = _fp( 'double' ),
+               util = _tyutil )
 
 
 
@@ -617,8 +654,8 @@ class Decl():
 
         return nxt
 
-    def __getitem__(self, item):
-        return getattr(self, item)
+    def __getitem__( self, item ):
+        return getattr( self, item )
 
 
 ####
@@ -692,22 +729,20 @@ class Soid():
 
             self.__Eext = None
             self.__Sext = None
-            cbools, _ = _type_resolve( ( True, False ) )
-            if self.oracle.E:
-                for var in self.oracle.E:
-                    if var.soid_base == 'bool':
-                        varg, _ = _type_resolve( ( var, ) )
-                        # since bools get turned into (Array (_ BitVec 32) (_ BitVec 8)), constrain them to either 0 or 1
-                        const = Or( Equal( varg[ 0 ], cbools[ 0 ] ), Equal( varg[ 0 ], cbools[ 1 ] ) )
-                        self.__Eext = And( self.__Eext, const ) if self.__Eext != None else const
 
-            if self.oracle.S:
-                for var in self.oracle.S:
-                    if var.soid_base == 'bool':
-                        varg, _ = _type_resolve( ( var, ) )
-                        # since bools get turned into (Array (_ BitVec 32) (_ BitVec 8)), constrain them to either 0 or 1
-                        const = Or( Equal( varg[ 0 ], cbools[ 0 ] ), Equal( varg[ 0 ], cbools[ 1 ] ) )
-                        self.__Sext = And( self.__Sext, const ) if self.__Sext != None else const
+            Es = list( self.oracle.E ) if self.oracle.E else []
+            Ss = list( self.oracle.S ) if self.oracle.S else []
+            for var in Es + Ss:
+                if hasattr(var, 'soid_isbool') and var.soid_isbool:
+                    varg, _  = _type_resolve( ( var, ))
+                    tbool, _ = _type_resolve( ( True, var ) )
+                    fbool, _ = _type_resolve( ( False, var ) )
+                    # since bools get turned into arrays or bitvectors, constrain them to either 0 or 1
+                    const = Or( Equal( varg[ 0 ], tbool[ 0 ] ), Equal( varg[ 0 ], fbool[ 0 ] ) )
+                if var in Es:
+                    self.__Eext = And( self.__Eext, const ) if self.__Eext != None else const
+                else:
+                    self.__Sext = And( self.__Sext, const ) if self.__Sext != None else const
 
             return
 
