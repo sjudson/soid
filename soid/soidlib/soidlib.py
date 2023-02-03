@@ -739,10 +739,10 @@ class Soid():
                     fbool, _ = _type_resolve( ( False, var ) )
                     # since bools get turned into arrays or bitvectors, constrain them to either 0 or 1
                     const = Or( Equal( varg[ 0 ], tbool[ 0 ] ), Equal( varg[ 0 ], fbool[ 0 ] ) )
-                if var in Es:
-                    self.__Eext = And( self.__Eext, const ) if self.__Eext != None else const
-                else:
-                    self.__Sext = And( self.__Sext, const ) if self.__Sext != None else const
+                    if var in Es:
+                        self.__Eext = And( self.__Eext, const ) if self.__Eext != None else const
+                    else:
+                        self.__Sext = And( self.__Sext, const ) if self.__Sext != None else const
 
             return
 
