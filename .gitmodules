@@ -1,18 +1,18 @@
 [submodule "klee"]
-	path = klee
+	path = deps/klee
 	url = https://github.com/klee/klee
 [submodule "klee-uclibc"]
-	path = klee-uclibc
+	path = deps/klee-uclibc
 	url = https://github.com/klee/klee-uclibc
 [submodule "klee-float"]
-	path = klee-float
+	path = deps/klee-float
 	url = https://github.com/sjudson/klee-float
 [submodule "tomlplusplus"]
-	path = tomlplusplus
+	path = deps/tomlplusplus
 	url = https://github.com/marzer/tomlplusplus
 [submodule "cvc5"]
-	path = cvc5
+	path = deps/cvc5
 	url = https://github.com/cvc5/cvc5
 [submodule "llvm-project"]
-	path = llvm-project
+	path = deps/llvm-project
 	url = https://github.com/llvm/llvm-project
