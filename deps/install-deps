@@ -32,26 +32,26 @@ fi
 
 # setup virtualenv and python depts
 envd="venv"
-if [ -d './venv' ]
+if [ -d '../venv' ]
 then
-    rm -rf ./venv
+    rm -rf ../venv
 fi
-if [ -d './env' ]
+if [ -d '../env' ]
 then
-    rm -rf ./env
+    rm -rf ../env
     envd="env"
 fi
 
 virtualenv $envd -p python3
 source ./$envd/bin/activate
-pip install -r requirements.txt
+pip install -r ../requirements.txt
 
 # cleanup
-if [ -d './build' ]
+if [ -d '../build' ]
 then
-    rm -rf ./build
+    rm -rf ../build
 fi
-mkdir ./build
+mkdir ../build
 
 # klee: top level folders
 cd ./klee
@@ -62,10 +62,10 @@ cd ./klee-uclibc
 ksucip="$(pwd)"
 cd ..
 
-mkdir ./build/libc++
-cd ./build/libc++
+mkdir ../build/libc++
+cd ../build/libc++
 cppip="$(pwd)"
-cd ../..
+cd ../../deps
 
 # configure uClibc and POSIX ()
 uname="$(uname -s)"

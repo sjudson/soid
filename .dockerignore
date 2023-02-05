@@ -1,0 +1,7 @@
+**/.git
+**/cvc5
+**/klee
+**/klee-float
+**/klee-uclibc
+**/llvm-project
+**/tomlplusplus
