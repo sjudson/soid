@@ -39,7 +39,6 @@ RUN DEBIAN_FRONTEND=noninteractive \
                         bc \
                         libboost-dev \
                         unzip \
-                        emacs-nox \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
@@ -50,7 +49,7 @@ EXPOSE 3000
 EXPOSE 5001
 
 # install python dependencies
-CMD = [ 'pip', 'install', '-r', '--no-cache-dir', '../requirements.txt' ]
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Install miniconda
 ENV CONDA_DIR /opt/conda
@@ -59,3 +58,19 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86
 
 # Put conda in path so we can use conda activate
 ENV PATH=$CONDA_DIR/bin:$PATH
+
+# link to prebuilt libcxx
+RUN mkdir ./build
+RUN ln -s ./deps/prebuilt/klee ./build/libc++
+
+# link to prebuilt klee-uclibc
+RUN ln -s ./deps/prebuilt/klee-uclibc ./klee-uclibc
+
+# link to prebuilt klee
+RUN ln -s ./deps/prebuilt/klee ./klee
+
+# link to prebuilt llvm-project
+RUN ln -s ./deps/prebuilt/llvm-project ./llvm-project
+
+# link to prebuilt klee-float
+RUN ln -s ./deps/prebuilt/klee-float ./klee-float
