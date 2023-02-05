@@ -39,6 +39,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
                         bc \
                         libboost-dev \
                         unzip \
+                        emacs-nox \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
@@ -47,6 +48,9 @@ RUN DEBIAN_FRONTEND=noninteractive \
 EXPOSE 3000
 # soid backend
 EXPOSE 5001
+
+# install python dependencies
+CMD = [ 'pip', 'install', '-r', '--no-cache-dir', '../requirements.txt' ]
 
 # Install miniconda
 ENV CONDA_DIR /opt/conda

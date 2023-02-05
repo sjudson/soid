@@ -47,11 +47,11 @@ source ./$envd/bin/activate
 pip install -r ../requirements.txt
 
 # cleanup
-if [ -d '../build' ]
+if [ -d './build' ]
 then
-    rm -rf ../build
+    rm -rf ./build
 fi
-mkdir ../build
+mkdir ./build
 
 # klee: top level folders
 cd ./klee
@@ -62,10 +62,10 @@ cd ./klee-uclibc
 ksucip="$(pwd)"
 cd ..
 
-mkdir ../build/libc++
-cd ../build/libc++
+mkdir ./build/libc++
+cd ./build/libc++
 cppip="$(pwd)"
-cd ../../deps
+cd ../..
 
 # configure uClibc and POSIX ()
 uname="$(uname -s)"
@@ -100,6 +100,7 @@ fi
 # klee: build libc++
 cd ./klee
 export LLVM_VERSION=11
+export LLVM_COMPILER=clang
 export SANITIZER_BUILD=
 export BASE=$cppip
 export REQUIRES_RTTI=1
@@ -108,6 +109,11 @@ export ENABLE_DEBUG=0
 export ENABLE_OPTIMIZED=1
 ./scripts/build/build.sh libcxx
 cd ..
+
+if ! [ -d '/usr/bin/clang' ]
+then
+    ln -s /usr/bin/clang-11 /usr/bin/clang
+fi
 
 # klee: configure klee
 if [ -d './klee/build' ]
