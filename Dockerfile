@@ -39,6 +39,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
                         bc \
                         libboost-dev \
                         unzip \
+                        libtool \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
@@ -60,17 +61,20 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86
 ENV PATH=$CONDA_DIR/bin:$PATH
 
 # link to prebuilt libcxx
-RUN mkdir ./build
-RUN ln -s ./deps/prebuilt/klee ./build/libc++
+RUN mkdir /usr/src/soid/deps/build
+RUN ln -s /usr/src/soid/deps/prebuilt/klee /usr/src/soid/deps/build/libc++
 
 # link to prebuilt klee-uclibc
-RUN ln -s ./deps/prebuilt/klee-uclibc ./klee-uclibc
+RUN ln -s /usr/src/soid/deps/prebuilt/klee-uclibc /usr/src/soid/deps/klee-uclibc
 
 # link to prebuilt klee
-RUN ln -s ./deps/prebuilt/klee ./klee
+RUN ln -s /usr/src/soid/deps/prebuilt/klee /usr/src/soid/deps/klee
 
 # link to prebuilt llvm-project
-RUN ln -s ./deps/prebuilt/llvm-project ./llvm-project
+RUN ln -s /usr/src/soid/deps/prebuilt/llvm-project /usr/src/soid/deps/llvm-project
 
 # link to prebuilt klee-float
-RUN ln -s ./deps/prebuilt/klee-float ./klee-float
+RUN ln -s /usr/src/soid/deps/prebuilt/klee-float /usr/src/soid/deps/klee-float
+
+# install soid
+RUN pip install .

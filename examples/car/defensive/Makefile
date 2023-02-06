@@ -1,6 +1,6 @@
-cc=../../../llvm-project/release/bin/clang -std=c99
-opt=../../../llvm-project/release/bin/opt
-link=../../../llvm-project/release/bin/llvm-link
+cc=../../../deps/llvm-project/release/bin/clang -std=c99
+opt=../../../deps/llvm-project/release/bin/opt
+link=../../../deps/llvm-project/release/bin/llvm-link
 
 BC1=./inter1.bc
 BC2=./inter2.bc
@@ -10,9 +10,9 @@ BC5=./inter5.bc
 BC6=./inter6.bc
 BC=./inter.bc
 
-KLEE=../../../klee-float/include/klee
-KEXEC=../../../klee-float/build/bin/klee
-PRE-LIB-KLEE=-L ../../../klee-float/build/lib/
+KLEE=../../../deps/klee-float/include/klee
+KEXEC=../../../deps/klee-float/build/bin/klee
+PRE-LIB-KLEE=-L ../../../deps/klee-float/build/lib/
 POST-LIB-KLEE=-lkleeRuntest
 
 SOIDLIB=../../../soid/soidlib

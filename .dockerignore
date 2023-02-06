@@ -1,8 +1,8 @@
 **/.git
-**/cvc5
-**/klee
-**/klee-float
-**/klee-uclibc
-**/llvm-project
-**/tomlplusplus
-**/install-deps
+**/deps/cvc5
+**/deps/klee
+**/deps/klee-float
+**/deps/klee-uclibc
+**/deps/llvm-project
+**/deps/tomlplusplus
+**/deps/install-deps
