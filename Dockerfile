@@ -40,6 +40,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
                         libboost-dev \
                         unzip \
                         libtool \
+                        freeglut3-dev \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
@@ -78,3 +79,6 @@ RUN ln -s /usr/src/soid/deps/prebuilt/klee-float /usr/src/soid/deps/klee-float
 
 # install soid
 RUN pip install .
+
+# run duckietown-soid
+CMD '/bin/bash /usr/src/soid/examples/gui/launch'

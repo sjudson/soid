@@ -16,3 +16,6 @@
 [submodule "deps/llvm-project"]
 	path = deps/llvm-project
 	url = https://github.com/llvm/llvm-project
+[submodule "examples/gui/duckietown-soid"]
+	path = examples/gui/duckietown-soid
+	url = git@github.com:mattelacqua/duckietown-soid.git

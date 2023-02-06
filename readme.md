@@ -1,5 +1,11 @@
 ### soid: smt-based oracles for investigating decisions
 
+##### docker command
+
+```shell
+$ host + && sudo docker run --rm --net=host --ipc=host -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --env="QT_X11_NO_MITSHM=1" soid/test
+```
+
 ##### install
 
 First you'll need to clone the repository with submodules:

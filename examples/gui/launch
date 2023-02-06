@@ -1,0 +1,13 @@
+#! /bin/bash
+
+conda init bash
+conda install conda-build
+conda env create -f /usr/src/soid/examples/gui/duckietown-soid/environment.yaml
+conda activate duckietown
+export PYTHONPATH="${PYTHONPATH}:/usr/src/soid/examples/gui/duckietown-soid/learning"
+export PYTHONPATH="${PYTHONPATH}:/usr/src/soid/examples/gui/duckietown-soid/src"
+export PYTHONPATH="${PYTHONPATH}:/usr/src/soid/examples/gui/duckietown-soid/src"
+conda develop /usr/src/soid/examples/gui/duckietown-soid
+pip3 install -e /usr/src/soid/examples/gui/duckietown-soid
+
+python /usr/src/soid/examples/gui/duckietown-soid/agents/experiment1.py /usr/src/soid/examples/gui/duckietown-soid/configs/example.ini
