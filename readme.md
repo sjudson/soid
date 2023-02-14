@@ -3,7 +3,7 @@
 ##### docker command
 
 ```shell
-$ host + && sudo docker run --rm --net=host --ipc=host -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --env="QT_X11_NO_MITSHM=1" soid/test
+$ host + && sudo docker run --rm --net=host --ipc=host -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --env="QT_X11_NO_MITSHM=1" --device /dev/dri/ soid/test
 ```
 
 ##### install

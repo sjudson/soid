@@ -1,4 +1,6 @@
 **/.git
+**/Dockerfile
+**/docker-compose.yml
 **/deps/cvc5
 **/deps/klee
 **/deps/klee-float

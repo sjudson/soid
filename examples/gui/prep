@@ -1,0 +1,31 @@
+#! /bin/bash
+
+export SOID_PATH="/usr/src/soid"
+
+eval "$(conda shell.bash hook)"
+conda install conda-build
+conda env create -f /usr/src/soid/examples/gui/duckietown-soid/environment.yaml
+conda activate duckietown
+export PYTHONPATH="${PYTHONPATH}:/usr/src/soid/examples/gui/duckietown-soid/learning"
+export PYTHONPATH="${PYTHONPATH}:/usr/src/soid/examples/gui/duckietown-soid/src"
+conda develop /usr/src/soid/examples/gui/duckietown-soid
+
+pip3 install --no-cache-dir -r /usr/src/soid/requirements.txt
+pip3 install /usr/src/soid
+pip3 install --timeout=10 -e /usr/src/soid/examples/gui/duckietown-soid
+
+mkdir /opt/conda/lib/backup
+mv /opt/conda/lib/libstd* /opt/conda/lib/backup
+cp /usr/lib/x86_64-linux-gnu/libstdc++.so.6 /opt/conda/lib
+ln -s /opt/conda/lib/libstdc++.so.6 /opt/conda/lib/libstdc++.so
+ln -s /opt/conda/lib/libstdc++.so.6 /opt/conda/lib/libstdc++.so.6.0.30
+
+mkdir /opt/conda/envs/duckietown/lib/backup
+mv /opt/conda/envs/duckietown/lib/libstd* /opt/conda/envs/duckietown/lib/backup
+cp /usr/lib/x86_64-linux-gnu/libstdc++.so.6 /opt/conda/envs/duckietown/lib
+ln -s /opt/conda/envs/duckietown/lib/libstdc++.so.6 /opt/conda/envs/duckietown/lib/libstdc++.so
+ln -s /opt/conda/envs/duckietown/lib/libstdc++.so.6 /opt/conda/envs/duckietown/lib/libstdc++.so.6.0.30
+
+mv /usr/src/soid/examples/gui/numpy_patch.py /opt/conda/envs/duckietown/lib/python3.9/site-packages/contracts/library/array_ops.py
+
+npm install --legacy-peer-deps /usr/src/soid/examples/gui/duckietown-soid/src/webserver/web-gui

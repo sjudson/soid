@@ -41,6 +41,11 @@ RUN DEBIAN_FRONTEND=noninteractive \
                         unzip \
                         libtool \
                         freeglut3-dev \
+                        libgl1-mesa-glx \
+                        ffmpeg \
+                        libsm6 \
+                        libxext6 \
+                        npm \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
@@ -49,9 +54,6 @@ RUN DEBIAN_FRONTEND=noninteractive \
 EXPOSE 3000
 # soid backend
 EXPOSE 5001
-
-# install python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
 
 # Install miniconda
 ENV CONDA_DIR /opt/conda
@@ -77,8 +79,16 @@ RUN ln -s /usr/src/soid/deps/prebuilt/llvm-project /usr/src/soid/deps/llvm-proje
 # link to prebuilt klee-float
 RUN ln -s /usr/src/soid/deps/prebuilt/klee-float /usr/src/soid/deps/klee-float
 
+# install python dependencies
+RUN pip install --no-cache-dir -r /usr/src/soid/requirements.txt
+
 # install soid
 RUN pip install .
 
+# prep duckietown-soid
+RUN mv /usr/src/soid/examples/gui/prep /usr/src/soid/examples/gui/duckietown-soid/prep
+RUN mv /usr/src/soid/examples/gui/launch /usr/src/soid/examples/gui/duckietown-soid/launch
+RUN /usr/src/soid/examples/gui/duckietown-soid/prep
+
 # run duckietown-soid
-CMD '/bin/bash /usr/src/soid/examples/gui/launch'
+#CMD /usr/src/soid/examples/gui/launch
