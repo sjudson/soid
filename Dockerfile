@@ -89,6 +89,3 @@ RUN pip install .
 RUN mv /usr/src/soid/examples/gui/prep /usr/src/soid/examples/gui/duckietown-soid/prep
 RUN mv /usr/src/soid/examples/gui/launch /usr/src/soid/examples/gui/duckietown-soid/launch
 RUN /usr/src/soid/examples/gui/duckietown-soid/prep
-
-# run duckietown-soid
-#CMD /usr/src/soid/examples/gui/launch

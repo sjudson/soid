@@ -1,0 +1,38 @@
+version: "3.9"
+services:
+  soid:
+    image: soid/alpha
+    container_name: soid
+    network_mode: "host"
+    ipc: "host"
+    stdin_open: true
+    tty: true
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    environment:
+      - DISPLAY=unix$DISPLAY
+      - QT_X11_NO_MITSHM=1
+    devices:
+      - "/dev/snd:/dev/snd"
+      - "/dev/dri:/dev/dri"
+    privileged: true
+    profiles:
+      - cli
+
+  soid-gui:
+    image: soid/alpha
+    container_name: soid_gui
+    network_mode: "host"
+    ipc: "host"
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    environment:
+      - DISPLAY=unix$DISPLAY
+      - QT_X11_NO_MITSHM=1
+    devices:
+      - "/dev/snd:/dev/snd"
+      - "/dev/dri:/dev/dri"
+    privileged: true
+    command: /bin/bash -c "cd /usr/src/soid/examples/gui/duckietown-soid/ && ./launch"
+    profiles:
+      - gui

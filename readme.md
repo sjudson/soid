@@ -2,11 +2,26 @@
 
 ##### docker command
 
+To run the GUI, do:
 ```shell
-$ host + && sudo docker run --rm --net=host --ipc=host -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --env="QT_X11_NO_MITSHM=1" --device /dev/dri/ soid/test
+$ sudo docker compose run soid-gui
+```
+After initialization, the GUI is available from the host at `localhost:3000`.
+
+To work directly with soid, or to modify the GUI, you first need to spin the image up, and then get a shell.
+```shell
+$ sudo docker compose run soid
+```
+Once in the container there is a minimal development environment, so to edit files you may need to do, e.g.:
+```shell
+# apt-get update && apt-get emacs-nox
+```
+to get Emacs, or equivalently for Vim or otherwise. If you want to launch the GUI from inside the image, just run
+```shell
+# ./usr/src/soid/examples/gui/duckietown-soid/launch
 ```
 
-##### install
+##### source install
 
 First you'll need to clone the repository with submodules:
 ```shell
@@ -46,21 +61,7 @@ $ sudo apt-get install build-essential \
                        unzip \
 
 ```
-or on MacOS, with [Homebrew](https://brew.sh/) installed
-```shell
-$ brew install curl \
-               git \
-               cmake \
-               python \
-               unzip \
-               gperftools \
-               sqlite3 \
-               doxygen \
-               bash \
-               z3 \
-               llvm@9
-```
-After this completes, all that is left is to run the dependency install script from within the base folder of the `soid` repo:
+After this completes, all that is left is to run the dependency install script from within the `deps` folder of the `soid` repo:
 ```
 $ ./install-deps
 ```
@@ -74,7 +75,7 @@ The first part, the `soid` tool itself, lives at `./soid/soid`. It is a Python p
 
 The second part, `soidlib`, refers to both a python library at `./soid/soidlib/soidlib.py` and c++ library at `./soid/soidlib/soidlib.h`. The python library supports writing queries, while the c++ library supports writing source programs amenable to analysis using soid (for the moment, it mostly just wraps `klee.h`).
 
-The last part, `Symbolize` at `./soid/symbolize/Symbolize.cpp`, is a currently in-progress component to autogenerate the annotations necessary for symbolic executions without requiring a programmer to manually alter the source program so that it can be used with soid.
+The last part, `Symbolize` at `./soid/symbolize/Symbolize.cpp`, is a currently in-progress component to autogenerate the annotations necessary for symbolic executions without requiring a programmer to manually alter the source program so that it can be used with soid/klee.
 
 ##### running soid
 
@@ -84,15 +85,13 @@ $ source ./venv/bin/activate
 ```
 Then invoke the `soid` tool, specifying the source program makefile `-m` and the directory containing the python module with the queries `-qs`, e.g.,:
 ```
-$ ./soid/soid.py -vs -m ./examples/microwave/src/Makefile -qs ./examples/microwave/queries
+$ ./soid/soid.py -vs -m ./examples/car/defensive/Makefile -qs ./examples/car/queries
 ```
 will execute the microwave example.
 
 ##### options
 
-Soid takes five options:
+Soid current takes two options:
 
 - `-m`, `--make`: the location of the source program makefile, defaults to `./Makefile`.
 - `-qs`, `--queries`: the location of the queries formulated as a python package, defaults to `./`.
-- `-vs`, `--variants`: passes a `SOID_QUERY=XXX` variable to the makefile to allow using source code variants for different queries.
-- `-n`, `--enum`: number of candidates to enumerate for synthesis queries (not yet implemented).
