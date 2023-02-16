@@ -1,7 +1,7 @@
 version: "3.9"
 services:
   soid:
-    image: soid/alpha
+    image: registry.gitlab.com/rose-yale/soid:latest
     container_name: soid
     network_mode: "host"
     ipc: "host"
@@ -20,7 +20,7 @@ services:
       - cli
 
   soid-gui:
-    image: soid/alpha
+    image: registry.gitlab.com/rose-yale/soid:latest
     container_name: soid_gui
     network_mode: "host"
     ipc: "host"

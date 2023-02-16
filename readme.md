@@ -2,15 +2,17 @@
 
 ##### docker command
 
+The easiest way to get setup with soid is to use Docker. You'll need to install both the [Docker Engine](https://docs.docker.com/engine/install/) and the [Docker Compose plugin](https://docs.docker.com/compose/install/). You can then just download `docker-compose.yml` (no need to clone the whole repository) and run the appropriate `docker compose run ...` command below. If the download fails, you might be having [authentication problems](https://docs.gitlab.com/ee/user/packages/container_registry/authenticate_with_container_registry.html).
+
 To run the GUI, do:
 ```shell
-$ sudo docker compose run soid-gui
+$ docker compose run soid-gui
 ```
 After initialization, the GUI is available from the host at `localhost:3000`.
 
 To work directly with soid, or to modify the GUI, you first need to spin the image up, and then get a shell.
 ```shell
-$ sudo docker compose run soid
+$ docker compose run soid
 ```
 Once in the container there is a minimal development environment, so to edit files you may need to do, e.g.:
 ```shell
