@@ -14,11 +14,11 @@ $ sudo docker compose run soid
 ```
 Once in the container there is a minimal development environment, so to edit files you may need to do, e.g.:
 ```shell
-# apt-get update && apt-get emacs-nox
+$ apt-get update && apt-get emacs-nox
 ```
 to get Emacs, or equivalently for Vim or otherwise. If you want to launch the GUI from inside the image, just run
 ```shell
-# ./usr/src/soid/examples/gui/duckietown-soid/launch
+$ ./usr/src/soid/examples/gui/duckietown-soid/launch
 ```
 
 ##### source install
