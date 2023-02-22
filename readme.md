@@ -8,7 +8,13 @@ To run the GUI, do:
 ```shell
 $ docker compose run soid-gui
 ```
-After initialization, the GUI is available from the host at `localhost:3000`.
+After initialization, the GUI is available from the host at `localhost:3000`. If the GUI complains about not having access to a display, you might need to install xvfb on the host machine, and do
+```shell
+$ Xvfb :0 -screen 0 1024x768x24 -ac +extension GLX +render -noreset &> xvfb.log &
+$ export DISPLAY=:0
+$ docker compose run soid-gui
+```
+instead.
 
 To work directly with soid, or to modify the GUI, you first need to spin the image up, and then get a shell.
 ```shell

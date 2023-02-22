@@ -41,11 +41,15 @@ RUN DEBIAN_FRONTEND=noninteractive \
                         unzip \
                         libtool \
                         freeglut3-dev \
+                        libglib2.0-0 \
+                        libsm6 \
+                        libxrender1 \
+                        libxext6 \
                         libgl1-mesa-glx \
                         ffmpeg \
-                        libsm6 \
-                        libxext6 \
                         npm \
+                        xvfb \
+                        mesa-utils \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
