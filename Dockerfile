@@ -84,7 +84,8 @@ RUN ln -s /usr/src/soid/deps/prebuilt/llvm-project /usr/src/soid/deps/llvm-proje
 RUN ln -s /usr/src/soid/deps/prebuilt/klee-float /usr/src/soid/deps/klee-float
 
 # install python dependencies
-RUN pip install --no-cache-dir -r /usr/src/soid/requirements.txt
+RUN pip install --no-cache-dir -r /usr/src/soid/requirements.txt && \
+    pip install pyglet==1.5.15
 
 # install soid
 RUN pip install .

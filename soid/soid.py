@@ -194,6 +194,7 @@ class Oracle():
 
         print( '\n\n##################\n## FINISHED KLEE #\n##################' )
 
+        self.resources[ 'paths' ] = len( paths )
         self.paths = paths
         self.build_pi()
 
@@ -373,7 +374,7 @@ class Oracle():
 
         self.info = None
 
-        self.resources = { 'time': { 'symbolic': None, 'verification': None, 'total': None } }
+        self.resources = { 'time': { 'symbolic': None, 'verification': None, 'total': None }, 'paths' : None }
 
         return
 
@@ -994,11 +995,11 @@ def model_recurse( expr, tier = 3 ):
 
 
 ####
-# model_pp
+# model_encode
 #
-# pretty print a model as a counterexample or counterfactual
+# pretty encode a model as a counterexample or counterfactual
 #
-def model_pp( E, S, P, model ):
+def model_encode( E, S, P, model, pp = False ):
     vs = [ d for d in model.decls() if '__soid__' not in d.name() ]
 
     Es = []
@@ -1042,15 +1043,38 @@ def model_pp( E, S, P, model ):
             Ps.append((name, val))
 
     nl = max( [ len( name[0] ) for name in Es + Ss + Ps ] )
+
+    encoded = { 'E' : [], 'S' : [], 'P' : [] }
     for (name, val) in sorted( Es,  key = lambda x: x[ 0 ] ):
+        encoded[ 'E' ].append( ( name, val ) )
+    for (name, val) in sorted( Ss,  key = lambda x: x[ 0 ] ):
+        encoded[ 'S' ].append( ( name, val ) )
+    for (name, val) in sorted( Ps,  key = lambda x: x[ 0 ] ):
+        encoded[ 'P' ].append( ( name, val ) )
+
+    if pp:
+        return model_pp( encoded, nl )
+
+    return encoded
+
+
+####
+# model_pp
+#
+# pretty print a model as a counterexample or counterfactual
+#
+def model_pp( encoded, nl ):
+
+    for (name, val) in encoded[ 'E' ]:
         print( f'\n\t                 {name.rjust( nl )}. {val}' )
     print( f'\n' )
-    for (name, val) in sorted( Ss, key = lambda x: x[ 0 ] ):
+    for (name, val) in encoded[ 'S' ]:
         print( f'\n\t                 {name.rjust( nl )}. {val}' )
     print( f'\n' )
-    for (name, val) in sorted( Ps, key = lambda x: x[ 0 ] ):
+    for (name, val) in encoded[ 'P' ]:
         print( f'\n\t                 {name.rjust( nl )}. {val}' )
     print( f'\n' )
+
 
     return
 
@@ -1128,7 +1152,7 @@ def verif_pp( info, unsat, model = None, resources = None ):
             f'\n\tcounterexample:                                                                                           '
             f'\n\t                                                                                                          '
         )
-        model_pp( info[ 'E' ], info[ 'S' ], info[ 'P' ], model )
+        model_encode( info[ 'E' ], info[ 'S' ], info[ 'P' ], model, True )
 
     print(
         f'\n\t                                                                                                              '
@@ -1173,7 +1197,7 @@ def scf_pp( info, sat, model = None, resources = None ):
             f'\n\tcounterfactual                                                                                            '
             f'\n\t                                                                                                          '
         )
-        model_pp( info[ 'E' ], info[ 'S' ], info[ 'P' ], model )
+        model_encode( info[ 'E' ], info[ 'S' ], info[ 'P' ], model, True )
 
     print(
         f'\n\t                                                                                                              '
@@ -1283,12 +1307,15 @@ def invoke_many( make_path, query_path, enum = 100, variants = False ):
         oracle.load( nxt )
         oracle.ld_agnt( make_path, variants, idx )
 
-        ret = oracle.run()
+        info, res, models = oracle.run()
         ueds = resource.getrusage(resource.RUSAGE_SELF)
         uedc = resource.getrusage(resource.RUSAGE_CHILDREN)
         oracle.resources[ 'time' ][ 'total' ]  = ( ueds.ru_utime - usts.ru_utime ) + ( uedc.ru_utime - ustc.ru_utime )
 
-        yield (ret[ 0 ], ret[ 1 ], ret[ 2 ], oracle.resources)
+        model = models[ 0 ] if models else None
+        models = { 'raw' : model, 'pp' : model.encode( model ) if model else None }
+
+        yield ( info, res, models, oracle.resources )
 
 
 if __name__ == '__main__':
