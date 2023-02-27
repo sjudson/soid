@@ -1279,7 +1279,7 @@ def invoke( oracle, make, query ):
     oracle.resources[ 'time' ][ 'total' ] = (ued.ru_utime - ust.ru_utime) + (ced.ru_utime - cst.ru_utime)
 
     model = models[ 0 ] if models else None
-    models = { 'raw' : model, 'pp' : model.encode( model ) if model else None }
+    models = { 'raw' : model, 'pp' : model_encode( info[ 'E' ], info[ 'S' ], info[ 'P' ], model ) if model else None }
 
     return (info, res, models, oracle.resources)
 
