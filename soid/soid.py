@@ -157,10 +157,10 @@ class Oracle():
             nm   = self.type + '.' + f'{idx}'
             cmd += [ f'SOID_QUERY={nm}' ]
 
-        ust = resource.getrusage(resource.RUSAGE_CHILDREN)
+        cst = resource.getrusage(resource.RUSAGE_CHILDREN)
         ret = subprocess.run( cmd, cwd = mdir )
-        ued = resource.getrusage(resource.RUSAGE_CHILDREN)
-        self.resources[ 'time' ][ 'symbolic' ]  = ued.ru_utime - ust.ru_utime
+        ced = resource.getrusage(resource.RUSAGE_CHILDREN)
+        self.resources[ 'time' ][ 'symbolic' ]  = ced.ru_utime - cst.ru_utime
 
         klee_last = mdir + '/klee-last'
 
@@ -842,10 +842,10 @@ class Oracle():
                     z3.And( self.phi(), self.psi(), z3.Not( self.f() ), self.pi() ),
                     self.beta() ) ) )
 
-        ust = resource.getrusage(resource.RUSAGE_SELF)
+        ust, cst = resource.getrusage(resource.RUSAGE_SELF), resource.getrusage(resource.RUSAGE_CHILDREN)
         unsat = ( self.solver.check() == z3.unsat )
-        ued = resource.getrusage(resource.RUSAGE_SELF)
-        self.resources[ 'time' ][ 'verification' ]  = ued.ru_utime - ust.ru_utime
+        ued, ced = resource.getrusage(resource.RUSAGE_SELF), resource.getrusage(resource.RUSAGE_CHILDREN)
+        self.resources[ 'time' ][ 'verification' ] = (ued.ru_utime - ust.ru_utime) + (ced.ru_utime - cst.ru_utime)
 
         if unsat:
             return ( self.info, unsat, None )
@@ -871,10 +871,10 @@ class Oracle():
                     z3.And( self.phi(), self.psi(), z3.Not( self.f() ), self.pi() ),
                     self.beta() ) ) )
 
-        ust = resource.getrusage(resource.RUSAGE_SELF)
+        ust, cst = resource.getrusage(resource.RUSAGE_SELF), resource.getrusage(resource.RUSAGE_CHILDREN)
         unsat = ( self.solver.check() == z3.unsat )
-        ued = resource.getrusage(resource.RUSAGE_SELF)
-        self.resources[ 'time' ][ 'verification' ]  = ued.ru_utime - ust.ru_utime
+        ued, ced = resource.getrusage(resource.RUSAGE_SELF), resource.getrusage(resource.RUSAGE_CHILDREN)
+        self.resources[ 'time' ][ 'verification' ]  = (ued.ru_utime - ust.ru_utime) + (ced.ru_utime - cst.ru_utime)
 
         if unsat:
             return ( self.info, not unsat, None )
@@ -1273,11 +1273,15 @@ def invoke( oracle, make, query ):
     oracle.load( query )
     oracle.ld_agnt( make )
 
-    ret = oracle.run()
-    ued = resource.getrusage(resource.RUSAGE_SELF)
-    oracle.resources[ 'time' ][ 'total' ]  = ued.ru_utime - ust.ru_utime
+    ust, cst = resource.getrusage(resource.RUSAGE_SELF), resource.getrusage(resource.RUSAGE_CHILDREN)
+    info, res, models = oracle.run()
+    ued, ced = resource.getrusage(resource.RUSAGE_SELF), resource.getrusage(resource.RUSAGE_CHILDREN)
+    oracle.resources[ 'time' ][ 'total' ] = (ued.ru_utime - ust.ru_utime) + (ced.ru_utime - cst.ru_utime)
 
-    return (ret[ 0 ], ret[ 1 ], ret[ 2 ], oracle.resources)
+    model = models[ 0 ] if models else None
+    models = { 'raw' : model, 'pp' : model.encode( model ) if model else None }
+
+    return (info, res, models, oracle.resources)
 
 
 def invoke_many( make_path, query_path, enum = 100, variants = False ):
@@ -1302,18 +1306,13 @@ def invoke_many( make_path, query_path, enum = 100, variants = False ):
         if nxt.skip:
             continue
 
-        usts = resource.getrusage(resource.RUSAGE_SELF)
-        ustc = resource.getrusage(resource.RUSAGE_CHILDREN)
+        ust, cst = resource.getrusage(resource.RUSAGE_SELF), resource.getrusage(resource.RUSAGE_CHILDREN)
         oracle.load( nxt )
         oracle.ld_agnt( make_path, variants, idx )
 
         info, res, models = oracle.run()
-        ueds = resource.getrusage(resource.RUSAGE_SELF)
-        uedc = resource.getrusage(resource.RUSAGE_CHILDREN)
-        oracle.resources[ 'time' ][ 'total' ]  = ( ueds.ru_utime - usts.ru_utime ) + ( uedc.ru_utime - ustc.ru_utime )
-
-        model = models[ 0 ] if models else None
-        models = { 'raw' : model, 'pp' : model.encode( model ) if model else None }
+        ued, ced = resource.getrusage(resource.RUSAGE_SELF), resource.getrusage(resource.RUSAGE_CHILDREN)
+        oracle.resources[ 'time' ][ 'total' ] = (ued.ru_utime - ust.ru_utime) + (ced.ru_utime - cst.ru_utime)
 
         yield ( info, res, models, oracle.resources )
 
