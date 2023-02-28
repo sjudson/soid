@@ -1035,17 +1035,37 @@ def model_encode( E, S, P, model ):
         if hasattr( ref, 'soid_val_pp' ) and val in ref.soid_val_pp:
             val = ref.soid_val_pp[ val ]
 
-        if E and ref in E:
-            Es.append((name, val))
-        if S and ref in S:
-            Ss.append((name, val))
-        if P and ref in P:
-            Ps.append((name, val))
+        # working around a sort conversion issue in Z3Py
+        if E:
+            for iref in E:
+                try:
+                    if ref == iref:
+                        Es.append((name, val))
+                except:
+                    pass
+
+        elif S:
+            for iref in S:
+                try:
+                    if ref == iref:
+                        Ss.append((name, val))
+                except:
+                    pass
+
+        elif P:
+            for iref in P:
+                try:
+                    if ref == iref:
+                        Ps.append((name, val))
+                except:
+                    pass
 
     encoded = { 'E' : sorted( Es,  key = lambda x: x[ 0 ] ),
                 'S' : sorted( Ss,  key = lambda x: x[ 0 ] ),
                 'P' : sorted( Ps,  key = lambda x: x[ 0 ] ),
-                'max_name_len' : max( [ len( name[ 0 ] ) for name in Es + Ss + Ps ] ) }
+                'util' : {
+                    'max_name_len' : max( [ len( name[ 0 ] ) for name in Es + Ss + Ps ] )
+                } }
 
     return encoded
 
@@ -1056,7 +1076,7 @@ def model_encode( E, S, P, model ):
 # pretty print a model as a counterexample or counterfactual
 #
 def model_pp( encoded ):
-    mnl = encoded[ 'max_name_len' ]
+    mnl = encoded[ 'util' ][ 'max_name_len' ]
 
     for (name, val) in encoded[ 'E' ]:
         print( f'\n\t                 {name.rjust( mnl )}. {val}' )
