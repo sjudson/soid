@@ -145,7 +145,7 @@ class Oracle():
     #
     # invokes KLEE to load agent constraints
     #
-    def ld_agnt( self, makefile, variants = None, idx = None ):
+    def ld_agnt( self, makefile, idx = None ):
         mdir, _ = os.path.split( makefile )
 
         print( '##################\n## INVOKING KLEE #\n##################\n\n' )
@@ -153,7 +153,7 @@ class Oracle():
         # todo: tie in symbolize
         cmd = [ 'make', 'symbolic' ]
 
-        if variants:
+        if idx != None:
             nm   = self.type + '.' + f'{idx}'
             cmd += [ f'SOID_QUERY={nm}' ]
 
@@ -313,7 +313,7 @@ class Oracle():
 
         query._Soid__declare()
         self.description = ''
-        if hasattr( query, '_Soid_descriptor' ):
+        if hasattr( query, '_Soid__descriptor' ):
             self.description = query._Soid__descriptor()
 
         self.expect = query.expect
@@ -999,14 +999,14 @@ def model_recurse( expr, tier = 3 ):
 #
 # pretty encode a model as a counterexample or counterfactual
 #
-def model_encode( E, S, P, model, pp = False ):
+def model_encode( E, S, P, model ):
     vs = [ d for d in model.decls() if '__soid__' not in d.name() ]
 
     Es = []
     Ss = []
     Ps = []
     for v in vs:
-        val   = model_recurse( model[ v ] )
+        val = model_recurse( model[ v ] )
 
         # sometimes there are other vars that aren't in the decls, e.g., xxx_ackermann!xx, so ignore them
         refs  = []
@@ -1042,18 +1042,10 @@ def model_encode( E, S, P, model, pp = False ):
         if P and ref in P:
             Ps.append((name, val))
 
-    nl = max( [ len( name[0] ) for name in Es + Ss + Ps ] )
-
-    encoded = { 'E' : [], 'S' : [], 'P' : [] }
-    for (name, val) in sorted( Es,  key = lambda x: x[ 0 ] ):
-        encoded[ 'E' ].append( ( name, val ) )
-    for (name, val) in sorted( Ss,  key = lambda x: x[ 0 ] ):
-        encoded[ 'S' ].append( ( name, val ) )
-    for (name, val) in sorted( Ps,  key = lambda x: x[ 0 ] ):
-        encoded[ 'P' ].append( ( name, val ) )
-
-    if pp:
-        return model_pp( encoded, nl )
+    encoded = { 'E' : sorted( Es,  key = lambda x: x[ 0 ] ),
+                'S' : sorted( Ss,  key = lambda x: x[ 0 ] ),
+                'P' : sorted( Ps,  key = lambda x: x[ 0 ] ),
+                'max_name_len' : max( [ len( name[ 0 ] ) for name in Es + Ss + Ps ] ) }
 
     return encoded
 
@@ -1063,18 +1055,18 @@ def model_encode( E, S, P, model, pp = False ):
 #
 # pretty print a model as a counterexample or counterfactual
 #
-def model_pp( encoded, nl ):
+def model_pp( encoded ):
+    mnl = encoded[ 'max_name_len' ]
 
     for (name, val) in encoded[ 'E' ]:
-        print( f'\n\t                 {name.rjust( nl )}. {val}' )
+        print( f'\n\t                 {name.rjust( mnl )}. {val}' )
     print( f'\n' )
     for (name, val) in encoded[ 'S' ]:
-        print( f'\n\t                 {name.rjust( nl )}. {val}' )
+        print( f'\n\t                 {name.rjust( mnl )}. {val}' )
     print( f'\n' )
     for (name, val) in encoded[ 'P' ]:
-        print( f'\n\t                 {name.rjust( nl )}. {val}' )
+        print( f'\n\t                 {name.rjust( mnl )}. {val}' )
     print( f'\n' )
-
 
     return
 
@@ -1152,7 +1144,7 @@ def verif_pp( info, unsat, model = None, resources = None ):
             f'\n\tcounterexample:                                                                                           '
             f'\n\t                                                                                                          '
         )
-        model_encode( info[ 'E' ], info[ 'S' ], info[ 'P' ], model, True )
+        model_pp( model )
 
     print(
         f'\n\t                                                                                                              '
@@ -1197,13 +1189,11 @@ def scf_pp( info, sat, model = None, resources = None ):
             f'\n\tcounterfactual                                                                                            '
             f'\n\t                                                                                                          '
         )
-        model_encode( info[ 'E' ], info[ 'S' ], info[ 'P' ], model, True )
+        model_pp( model )
 
     print(
         f'\n\t                                                                                                              '
     )
-
-
 
 
 ####
@@ -1220,13 +1210,8 @@ def parse_args():
     parser.add_argument( '-qs', '-queries', action = 'store', type = str, default = None, dest = 'queries', required = True, \
                          help = 'Location of queries directory; if not a resolveable path soid will attempt to use ./')
 
-    parser.add_argument( '-vs', '--variants', action = 'store_true', default = False, dest = 'variants', \
-                         help = 'Pass variable into makefile allowing use of source code variants.' )
-
-    parser.add_argument( '-n', '--enum', action = 'store', type = int, default = 100, dest = 'enum', required = False, \
-                         help = 'Number of candidates to enumerate, used for sufficient synthesis queries.' )
-
     args = parser.parse_args()
+    args.queries = args.queries.rstrip('/')
 
     if not os.path.exists( args.make ):
         args.make  = './Makefile'
@@ -1267,13 +1252,12 @@ def extract( qs, args, oracle, queue = [] ):
 ###########################
 
 
-def invoke( oracle, make, query ):
-
-    ust = resource.getrusage(resource.RUSAGE_SELF)
-    oracle.load( query )
-    oracle.ld_agnt( make )
+def invoke( oracle, make_path, query, idx = None ):
 
     ust, cst = resource.getrusage(resource.RUSAGE_SELF), resource.getrusage(resource.RUSAGE_CHILDREN)
+    oracle.load( query )
+    oracle.ld_agnt( make_path, idx )
+
     info, res, models = oracle.run()
     ued, ced = resource.getrusage(resource.RUSAGE_SELF), resource.getrusage(resource.RUSAGE_CHILDREN)
     oracle.resources[ 'time' ][ 'total' ] = (ued.ru_utime - ust.ru_utime) + (ced.ru_utime - cst.ru_utime)
@@ -1281,10 +1265,10 @@ def invoke( oracle, make, query ):
     model = models[ 0 ] if models else None
     models = { 'raw' : model, 'pp' : model_encode( info[ 'E' ], info[ 'S' ], info[ 'P' ], model ) if model else None }
 
-    return (info, res, models, oracle.resources)
+    return ( info, res, models, oracle.resources )
 
 
-def invoke_many( make_path, query_path, enum = 100, variants = False ):
+def invoke_many( make_path, query_path ):
 
     oracle = Oracle()
 
@@ -1306,35 +1290,27 @@ def invoke_many( make_path, query_path, enum = 100, variants = False ):
         if nxt.skip:
             continue
 
-        ust, cst = resource.getrusage(resource.RUSAGE_SELF), resource.getrusage(resource.RUSAGE_CHILDREN)
-        oracle.load( nxt )
-        oracle.ld_agnt( make_path, variants, idx )
-
-        info, res, models = oracle.run()
-        ued, ced = resource.getrusage(resource.RUSAGE_SELF), resource.getrusage(resource.RUSAGE_CHILDREN)
-        oracle.resources[ 'time' ][ 'total' ] = (ued.ru_utime - ust.ru_utime) + (ced.ru_utime - cst.ru_utime)
-
-        yield ( info, res, models, oracle.resources )
+        yield invoke( oracle, make_path, nxt, idx )
 
 
 if __name__ == '__main__':
     import soidlib
 
     args = parse_args()
-    outs = invoke_many( args.make, args.queries, args.enum, args.variants )
+    outs = invoke_many( args.make, args.queries )
 
-    for ( info, res, models, resources ) in outs:
+    for ( info, res, model, resources ) in outs:
 
         if info[ 'type' ] == soidlib.introduction:
             print( info[ 'description' ] + '\n\n' )
             continue
 
         if info[ 'type' ] == soidlib.verification:
-            verif_pp( info, res, models[ 0 ] if models else None, resources )
+            verif_pp( info, res, model[ 'pp' ], resources )
             continue
 
         if info[ 'type' ] == soidlib.counterfactual.single:
-            scf_pp( info, res, models[ 0 ] if models else None, resources )
+            scf_pp( info, res, model[ 'pp' ], resources )
             continue
 
         try:
