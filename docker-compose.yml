@@ -36,3 +36,21 @@ services:
     command: /bin/bash -c "cd /usr/src/soid/examples/gui/duckietown-soid/ && ./launch"
     profiles:
       - gui
+
+  soid-gui-crash:
+    image: registry.gitlab.com/rose-yale/soid:latest
+    container_name: soid_gui_crash
+    network_mode: "host"
+    ipc: "host"
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    environment:
+      - DISPLAY=unix$DISPLAY
+      - QT_X11_NO_MITSHM=1
+    devices:
+      - "/dev/snd:/dev/snd"
+      - "/dev/dri:/dev/dri"
+    privileged: true
+    command: /bin/bash -c "cd /usr/src/soid/examples/gui/duckietown-soid/ && ./launch -c"
+    profiles:
+      - gui-crash

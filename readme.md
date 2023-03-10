@@ -14,7 +14,12 @@ $ Xvfb :0 -screen 0 1024x768x24 -ac +extension GLX +render -noreset &> xvfb.log 
 $ export DISPLAY=:0
 $ docker compose run soid-gui
 ```
-instead.
+instead. You can also spin up the hardcoded broadside crash scenario from the paper with
+```shell
+$ docker compose run soid-gui-crash
+```
+as well.
+
 
 To work directly with soid, or to modify the GUI, you first need to spin the image up, and then get a shell.
 ```shell
@@ -28,6 +33,11 @@ to get Emacs, or equivalently for Vim or otherwise. If you want to launch the GU
 ```shell
 $ ./usr/src/soid/examples/gui/duckietown-soid/launch
 ```
+for the normal scenario or
+```shell
+$ ./usr/src/soid/examples/gui/duckietown-soid/launch -c
+```
+for the crash.
 
 ##### source install
 
