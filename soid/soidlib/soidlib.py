@@ -727,22 +727,28 @@ class Soid():
             if P:
                 self.oracle.P = self.__varset( P, Decl() )
 
-            self.__Eext = None
-            self.__Sext = None
+            # since bools get turned into arrays or bitvectors, constrain them to either 0 or 1
+            def extend( vs ):
+                exts = None
+                for v in vs:
+                    if hasattr( v, 'soid_isbool' ) and v.soid_isbool:
+                        varg,  _ = _type_resolve( ( v, ))
+                        tbool, _ = _type_resolve( ( True, v ) )
+                        fbool, _ = _type_resolve( ( False, v ) )
+
+                        const = Or( Equal( varg[ 0 ], tbool[ 0 ] ), Equal( varg[ 0 ], fbool[ 0 ] ) )
+                        exts = And( exts, const ) if exts != None else const
+
+                return exts
 
             Es = list( self.oracle.E ) if self.oracle.E else []
+            self.__Eext = extend( Es )
+
             Ss = list( self.oracle.S ) if self.oracle.S else []
-            for var in Es + Ss:
-                if hasattr(var, 'soid_isbool') and var.soid_isbool:
-                    varg, _  = _type_resolve( ( var, ))
-                    tbool, _ = _type_resolve( ( True, var ) )
-                    fbool, _ = _type_resolve( ( False, var ) )
-                    # since bools get turned into arrays or bitvectors, constrain them to either 0 or 1
-                    const = Or( Equal( varg[ 0 ], tbool[ 0 ] ), Equal( varg[ 0 ], fbool[ 0 ] ) )
-                    if var in Es:
-                        self.__Eext = And( self.__Eext, const ) if self.__Eext != None else const
-                    else:
-                        self.__Sext = And( self.__Sext, const ) if self.__Sext != None else const
+            self.__Sext = extend( Ss )
+
+            Ps = list( self.oracle.P ) if self.oracle.P else []
+            self.__Pext = extend( Ps )
 
             return
 
@@ -765,6 +771,7 @@ class Soid():
     # __reg_env
     #
     # decorator whose inner loads query environmental constraints
+    # we also tag on the extended type constraints for P (forcing bools to be bools, etc.)
     #
     def __reg_env( self, f ):
         def __inner( *args, **kwargs ):
@@ -772,11 +779,16 @@ class Soid():
             if isinstance( eqn, bool ):
                 eqn = _fbool( eqn )
 
-            if self.__Eext == None:
+            if self.__Eext == None and self.__Pext == None:
                 return eqn
 
-            neqn = And( eqn, self.__Eext )
+            neqn = eqn
             setattr( neqn, 'soid_pp', eqn.soid_pp )
+
+            if self.__Eext != None:
+                neqn = And( neqn, self.__Eext )
+            if self.__Pext != None:
+                neqn = And( neqn, self.__Pext )
 
             return neqn
         self.__environmental = __inner
@@ -814,6 +826,7 @@ class Soid():
             if isinstance( eqn, bool ):
                 eqn = _fbool( eqn )
 
+            return eqn
         self.__falsified = __inner
 
 
