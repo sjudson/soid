@@ -93,4 +93,7 @@ RUN pip install .
 # prep duckietown-soid
 RUN mv /usr/src/soid/examples/gui/prep /usr/src/soid/examples/gui/duckietown-soid/prep
 RUN mv /usr/src/soid/examples/gui/launch /usr/src/soid/examples/gui/duckietown-soid/launch
+RUN mv /usr/src/soid/examples/gui/benchmarks/runner /usr/src/soid/examples/gui/duckietown-soid/runner
+RUN mv /usr/src/soid/examples/gui/benchmarks/run_tests.py /usr/src/soid/examples/gui/duckietown-soid/run_tests.py
+
 RUN /usr/src/soid/examples/gui/duckietown-soid/prep
