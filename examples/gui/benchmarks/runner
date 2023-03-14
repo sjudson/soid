@@ -8,4 +8,4 @@ export PYTHONPATH="${PYTHONPATH}:/usr/src/soid/examples/gui/duckietown-soid/lear
 export PYTHONPATH="${PYTHONPATH}:/usr/src/soid/examples/gui/duckietown-soid/src"
 conda develop /usr/src/soid/examples/gui/duckietown-soid
 
-python ./run_tests.py
+python /usr/src/soid/examples/gui/duckietown-soid/run_tests.py

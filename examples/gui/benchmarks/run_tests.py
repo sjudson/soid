@@ -38,7 +38,7 @@ def run( test, model ):
 def execute( tests ):
     add = ''
     for test in tests:
-        add += f'    ---{chr(92)}rule{{0pt}}{{2.5ex}} & {chr(92)}multicolumn{{5}}{{l}}{{{test[ 1 ]}}}{chr(92)}{chr(92)}{chr(92)}midrule\n'
+        add += f'    {test[ 2 ]}{chr(92)}rule{{0pt}}{{2.5ex}} & {chr(92)}multicolumn{{5}}{{|l}}{{{test[ 1 ]}}}{chr(92)}{chr(92)}{chr(92)}midrule\n'
 
         for model in [ 'standard', 'impatient', 'pathological' ]:
             results = ( test[ 0 ], model )
@@ -75,13 +75,13 @@ $$\begin{tabularx}{\textwidth}{c *{5}{Y}}
 
     execute(
         [
-            ( 'moved', '$\\varphi_{fact}$, \\textit{moved?}' ),
-            ( 'always_move', '$\\varphi^* \equiv \\varphi_{fact}[(\\texttt{agent1\_signal\_choice} = 2) \mapsto (\\texttt{agent1\_signal\_choice} \in \{ 0, \, 1, \, 2 \})]$, \\textit{always move?}' ),
-            ( 'ever_not_move', '$\\varphi^* \equiv \\varphi_{fact}[(\\texttt{agent1\_signal\_choice} = 2) \mapsto (\\texttt{agent1\_signal\_choice} \in \{ 0, \, 1, \, 2 \})]$, \\textit{ever not move?}' ),
-            ( 'range_always_move', '$\\varphi^*[(\\texttt{agent1\_pos\_z} = 1.83) \mapsto (1.65 \leq \\texttt{agent1\_pos\_z} \leq 2.0) ]$, \\textit{always move?}' ),
-            ( 'range_ever_not_move', '$\\varphi^*[(\\texttt{agent1\_pos\_z} = 1.83) \mapsto (1.65 \leq \\texttt{agent1\_pos\_z} \leq 2.0) ]$, \\textit{ever not move?}' ),
-            ( 'car_always_move', '$\\varphi^* \land (\\texttt{agent2\_pos\_x} = X.X) \land (\\texttt{agent2\_pos\_z} = X.X) \land \cdots$, \\textit{always move?}' ),
-            ( 'car_ever_not_move', '$\\varphi^* \land (\\texttt{agent2\_pos\_x} = X.X) \land (\\texttt{agent2\_pos\_z} = X.X) \land \cdots$, \\textit{ever not move?}' ),
+            ( 'moved', '$\\varphi_{fact}$, \\textit{moved?}', '\fprop' ),
+            ( 'always_move', '$\\varphi^* \equiv \\varphi_{fact}[(\\texttt{agent1\_signal\_choice} = 2) \mapsto (\\texttt{agent1\_signal\_choice} \in \{ 0, \, 1, \, 2 \})]$, \\textit{always move?}', '\cprop' ),
+            ( 'ever_not_move', '$\\varphi^* \equiv \\varphi_{fact}[(\\texttt{agent1\_signal\_choice} = 2) \mapsto (\\texttt{agent1\_signal\_choice} \in \{ 0, \, 1, \, 2 \})]$, \\textit{ever not move?}', '\cprop' ),
+            ( 'range_always_move', '$\\varphi^*[(\\texttt{agent1\_pos\_z} = 1.83) \mapsto (1.65 \leq \\texttt{agent1\_pos\_z} \leq 2.0) ]$, \\textit{always move?}', '\cprop' ),
+            ( 'range_ever_not_move', '$\\varphi^*[(\\texttt{agent1\_pos\_z} = 1.83) \mapsto (1.65 \leq \\texttt{agent1\_pos\_z} \leq 2.0) ]$, \\textit{ever not move?}', '\cprop' ),
+            ( 'car_always_move', '$\\varphi^* \land (\\texttt{agent2\_pos\_x} = X.X) \land (\\texttt{agent2\_pos\_z} = X.X) \land \cdots$, \\textit{always move?}', '\cprop' ),
+            ( 'car_ever_not_move', '$\\varphi^* \land (\\texttt{agent2\_pos\_x} = X.X) \land (\\texttt{agent2\_pos\_z} = X.X) \land \cdots$, \\textit{ever not move?}', '\cprop' ),
         ]
     )
 
