@@ -46,7 +46,7 @@ def execute( tests ):
 
         for model in [ 'standard', 'impatient', 'pathological' ]:
             results = run( test[ 0 ], model )
-            add += f'   {model} & {mark(results[ 0 ])} & {results[ 1 ]:.3e} & { results[ 2 ]:.3e} & {results[ 3 ]:.3e} & {results[ 4 ]}{chr(92)}{chr(92)}{chr(92)}midrule'
+            add += f'    {model} & {mark(results[ 0 ])} & {results[ 1 ]:.3e} & { results[ 2 ]:.3e} & {results[ 3 ]:.3e} & {results[ 4 ]}{chr(92)}{chr(92)}{chr(92)}midrule\n'
 
     return add
 
