@@ -4147,10 +4147,10 @@
         "forward_step": 0.44,
         "speed": 0.293,
         "turn_choice": "Straight",
-        "signal_choice": "Right",
+        "signal_choice": null,
         "lookahead": 0.585
       },
-         "symbolic": {
+      "symbolic": {
         "list_pos_x": [],
         "list_pos_z": [],
         "list_angle": [],

@@ -4141,7 +4141,7 @@
       "concrete": {
         "id": 1,
         "agent_id": "agent1",
-        "pos_x": 1.376,
+        "pos_x": null,
         "pos_z": 1.589,
         "angle": 0.023,
         "forward_step": 0.44,
@@ -4151,7 +4151,25 @@
         "lookahead": 0.585
       },
       "symbolic": {
-        "list_pos_x": [],
+        "list_pos_x": [
+          {
+            "is_pos_x": true,
+            "is_pos_z": false,
+            "is_angle": false,
+            "is_forward_step": false,
+            "is_speed": false,
+            "is_signalchoice": false,
+            "is_turnchoice": false,
+            "is_value": false,
+            "is_range": true,
+            "value": 0,
+            "range": {
+              "turn_choices": [],
+              "low_bound": "0.75",
+              "high_bound": "1.25"
+            }
+          }
+        ],
         "list_pos_z": [],
         "list_angle": [],
         "list_forward_step": [],

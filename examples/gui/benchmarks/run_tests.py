@@ -87,10 +87,10 @@ $$\\begin{tabularx}{\\textwidth}{c *{5}{Y}}
             ( 'moved', '$\\varphi_{fact}$, \\textit{moved?}', '\\fprop' ),
             ( 'always_move', '$\\varphi^* \equiv \\varphi_{fact}[(\\texttt{agent1\_signal\_choice} = 2) \mapsto (\\texttt{agent1\_signal\_choice} \in \{ 0, \, 1, \, 2 \})]$, \\textit{always move?}', '\cprop' ),
             ( 'ever_not_move', '$\\varphi^* \equiv \\varphi_{fact}[(\\texttt{agent1\_signal\_choice} = 2) \mapsto (\\texttt{agent1\_signal\_choice} \in \{ 0, \, 1, \, 2 \})]$, \\textit{ever not move?}', '\cprop' ),
-            ( 'range_always_move', '$\\varphi^*[(\\texttt{agent1\_pos\_z} = 1.83) \mapsto (1.65 \leq \\texttt{agent1\_pos\_z} \leq 2.0) ]$, \\textit{always move?}', '\cprop' ),
-            ( 'range_ever_not_move', '$\\varphi^*[(\\texttt{agent1\_pos\_z} = 1.83) \mapsto (1.65 \leq \\texttt{agent1\_pos\_z} \leq 2.0) ]$, \\textit{ever not move?}', '\cprop' ),
-            ( 'car_always_move', '$\\varphi^* \land (\\texttt{agent2\_pos\_x} = X.X) \land (\\texttt{agent2\_pos\_z} = X.X) \land \cdots$, \\textit{always move?}', '\cprop' ),
-            ( 'car_ever_not_move', '$\\varphi^* \land (\\texttt{agent2\_pos\_x} = X.X) \land (\\texttt{agent2\_pos\_z} = X.X) \land \cdots$, \\textit{ever not move?}', '\cprop' ),
+            ( 'range_always_move', '$\\varphi^*[(\\texttt{agent1\_pos\_x} = 1.376) \mapsto (1.0 \leq \\texttt{agent1\_pos\_x} \leq 1.5) ]$, \\textit{always move?}', '\cprop' ),
+            ( 'range_ever_not_move', '$\\varphi^*[(\\texttt{agent1\_pos\_x} = 1.376) \mapsto (1.0 \leq \\texttt{agent1\_pos\_x} \leq 1.5) ]$, \\textit{ever not move?}', '\cprop' ),
+            ( 'car_always_move', '$\\varphi^* \land (\\texttt{agent2\_pos\_x} = 1.316) \land (\\texttt{agent2\_pos\_z} = 0.378) \land \cdots$, \\textit{always move?}', '\cprop' ),
+            ( 'car_ever_not_move', '$\\varphi^* \land (\\texttt{agent2\_pos\_x} = 1.316) \land (\\texttt{agent2\_pos\_z} = 0.378) \land \cdots$, \\textit{ever not move?}', '\cprop' ),
         ]
     )
 

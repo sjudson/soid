@@ -7,7 +7,7 @@
     "grid_h": 5,
     "road_tile_size": 0.585,
     "max_steps": 1500,
-    "num_agents": 2,
+    "num_agents": 3,
     "model": [
       [
         -6.1930317878723145,
@@ -4186,6 +4186,35 @@
         "intersection_arrival": 42,
         "patience": 0,
         "step_count": 110
+      }
+    },
+    "agent2": {
+      "concrete": {
+        "id": 2,
+        "agent_id": "agent2",
+        "pos_x": 1.316,
+        "pos_z": 0.378,
+        "angle": 4.712,
+        "forward_step": 0.42,
+        "speed": 0,
+        "turn_choice": "Left",
+        "signal_choice": "Left",
+        "lookahead": 0.585
+      },
+      "symbolic": {
+        "list_pos_x": [],
+        "list_pos_z": [],
+        "list_angle": [],
+        "list_forward_step": [],
+        "list_speed": [],
+        "list_signal_choice": [],
+        "list_turn_choice": []
+      },
+      "state": {
+        "initial_direction": 1,
+        "intersection_arrival": -1,
+        "patience": 0,
+        "step_count": 0
       }
     }
   },
