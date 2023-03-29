@@ -14,6 +14,8 @@ pip install --no-cache-dir -r /usr/src/soid/requirements.txt
 pip install -e /usr/src/soid
 pip install --timeout=10 -e /usr/src/soid/examples/gui/duckietown-soid
 
+python /usr/src/soid/examples/gui/benchmarks/queries/generator.py
+
 mkdir /opt/conda/lib/backup
 mv /opt/conda/lib/libstd* /opt/conda/lib/backup
 cp /usr/lib/x86_64-linux-gnu/libstdc++.so.6 /opt/conda/lib
