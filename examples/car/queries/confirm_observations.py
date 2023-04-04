@@ -12,6 +12,7 @@ def descriptor():
         f'\n\tquestion: Did the core logic decide on the action that was observed, or are we looking in the wrong place?        '
     )
 
+
 @soid.register
 def environmental( E ):
     return And( And( Equal( E.occupied_0_0, False ) ),
@@ -46,5 +47,5 @@ def state( S ):
 
 
 @soid.register
-def behavior( E, S, P ):
-    return Equal( P.move, True )
+def behavior( D ):
+    return Equal( D.move, True )

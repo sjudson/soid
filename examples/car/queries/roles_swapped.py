@@ -24,6 +24,7 @@ def descriptor():
         f'\n\t                                                                                                                  '
     )
 
+
 @soid.register
 def environmental( E ):
     return And( And( Equal( E.occupied_0_0, False ) ),
@@ -84,5 +85,5 @@ def falsified( E, S ):
 
 
 @soid.register
-def behavior( E, S, P ):
-    return Equal( P.move, True )
+def behavior( D ):
+    return Equal( D.move, True )

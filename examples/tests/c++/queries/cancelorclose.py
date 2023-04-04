@@ -31,5 +31,5 @@ def state( S ):
 
 
 @soid.register
-def behavior( E, S, P ):
-    return Or( Equal( P.decision, cancel ), Equal( P.decision, dclose ) )
+def behavior( D ):
+    return Or( Equal( D.decision, cancel ), Equal( D.decision, dclose ) )

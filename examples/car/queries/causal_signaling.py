@@ -87,5 +87,5 @@ def falsified( E, S ):
 
 
 @soid.register
-def behavior( E, S, P ):
-    return Equal( P.move, False )
+def behavior( D ):
+    return Equal( D.move, False )

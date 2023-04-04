@@ -2,13 +2,12 @@
 
 from colorama import Fore, Style
 from collections import namedtuple
+from symbexec import KleeSymbExec
 
 import os
 import os.path
-import re
 import sys
 import argparse
-import subprocess
 import importlib
 import types
 import functools
@@ -37,10 +36,25 @@ class Oracle():
             #soidlib.agent                     : self.agent
         }
 
+        self.engines = {
+            'klee' : KleeSymbExec
+        }
+
         self.ct  = 0
         self.introduction = ''
 
         self.reset()
+        return
+
+
+    ####
+    # set_engine
+    #
+    # set the symbolic execution engine
+    #
+    def set_engine( self, name, path ):
+        # TODO: handle error case
+        self.symbexec = self.engines[ name ]( path )
         return
 
 
@@ -123,14 +137,15 @@ class Oracle():
         if hasattr( query, '_Soid__behavior' ):
             info = query._Soid__behavior_info
 
-            if info.args == [ 'P' ]:
-                ret = query._Soid__behavior( self.P )
-            elif info.args == [ 'E', 'P' ]:
-                ret = query._Soid__behavior( self.E, self.P )
-            elif info.args == [ 'S', 'P' ]:
-                ret = query._Soid__behavior( self.S, self.P )
-            elif info.args == [ 'E', 'S', 'P' ]:
-                ret = query._Soid__behavior( self.E, self.S, self.P )
+            # support old 'P' name
+            if info.args == [ 'D' ] or info.args == [ 'P' ]:
+                ret = query._Soid__behavior( self.D )
+            elif info.args == [ 'E', 'D' ] or info.args == [ 'E', 'P' ]:
+                ret = query._Soid__behavior( self.E, self.D )
+            elif info.args == [ 'S', 'D' ] or info.args == [ 'S', 'P' ]:
+                ret = query._Soid__behavior( self.S, self.D )
+            elif info.args == [ 'E', 'S', 'D' ] or info.args == [ 'E', 'S', 'P' ]:
+                ret = query._Soid__behavior( self.E, self.S, self.D )
             else:
                 pass # todo: handle
 
@@ -143,60 +158,22 @@ class Oracle():
     ####
     # ld_agnt
     #
-    # invokes KLEE to load agent constraints
+    # invokes symbolic execution to load agent constraints
     #
-    def ld_agnt( self, makefile, idx = None ):
-        mdir, _ = os.path.split( makefile )
-
-        print( '##################\n## INVOKING KLEE #\n##################\n\n' )
-
-        # todo: tie in symbolize
-        cmd = [ 'make', 'symbolic' ]
-
-        if idx != None:
-            nm   = self.type + '.' + f'{idx}'
-            cmd += [ f'SOID_QUERY={nm}' ]
+    def ld_agnt( self, query, idx = None ):
+        self.symbexec.preprocess( query, idx )
 
         cst = resource.getrusage(resource.RUSAGE_CHILDREN)
-        ret = subprocess.run( cmd, cwd = mdir )
+        self.symbexec.execute( query, idx )
         ced = resource.getrusage(resource.RUSAGE_CHILDREN)
         self.resources[ 'time' ][ 'symbolic' ]  = ced.ru_utime - cst.ru_utime
 
-        klee_last = mdir + '/klee-last'
-
-        i  = 1
-        fs = []
-        while True:
-            fn = klee_last + '/test' + str( i ).zfill( 6 ) + '.smt2'
-            if not os.path.isfile( fn ):
-                break
-
-            fs.append( fn )
-            i += 1
-
-        if not fs:
-            raise Exception('Unable to find symbolic execution output')
-
-        paths = []
-        for f in fs:
-            path_components = z3.parse_smt2_file( f )
-            if not path_components:
-                raise Exception('Unable to parse symbolic execution output')
-            if len( path_components ) == 1:
-                paths.append( path_components[ 0 ] )
-                break
-
-            paths.append( z3.And( *path_components ) )
-
-        print( '\n\n##################\n## CLEANING KLEE #\n##################\n\n' )
-
-        ret = subprocess.run( [ 'make', 'clean' ], cwd = mdir )
-
-        print( '\n\n##################\n## FINISHED KLEE #\n##################' )
+        paths = self.symbexec.parse( query, idx )
+        self.symbexec.clean( query, idx )
 
         self.resources[ 'paths' ] = len( paths )
         self.paths = paths
-        self.build_pi()
+        self.build_pi( query, idx )
 
         return
 
@@ -204,9 +181,9 @@ class Oracle():
     ####
     # build_pi
     #
-    # combines paths from KLEE to generate agent constraints
+    # combines paths from symbolic execution to generate agent constraints
     #
-    def build_pi( self ):
+    def build_pi( self, query, idx ):
 
         def create( p ):
             if p.soid_isbv:
@@ -244,46 +221,24 @@ class Oracle():
 
             return v
 
-        symbls = [ create( p ) for p in self.P ]
+        symbls = [ create( d ) for d in self.D ]
 
-        def cast( i, p ):
-            if p.soid_isbv or p.soid_isflt or p.soid_isdbl:
-                return ( p == symbls[ i ] )
-            if not p.soid_base == 'bool':
-                return soidlib.types.util.bv32arr_to_bv32( p ) == soidlib.types.util.bv32arr_to_bv32( symbls[ i ] )
-            return soidlib.types.util.bv8arr_to_bv8( p ) == soidlib.types.util.bv8arr_to_bv8( symbls[ i ] )
+        def cast( i, d ):
+            if d.soid_isbv or d.soid_isflt or d.soid_isdbl:
+                return ( d == symbls[ i ] )
+            if not d.soid_base == 'bool':
+                return soidlib.types.util.bv32arr_to_bv32( d ) == soidlib.types.util.bv32arr_to_bv32( symbls[ i ] )
+            return soidlib.types.util.bv8arr_to_bv8( d ) == soidlib.types.util.bv8arr_to_bv8( symbls[ i ] )
 
-        amends = [ cast( i, p ) for i, p in enumerate( self.P ) ]
+        amends = [ cast( i, d ) for i, d in enumerate( self.D ) ]
 
         varset = set()
         for path in self.paths:
             for v in z3.z3util.get_vars( path ):
                 varset.add( v )
-        varlist = list( varset )
 
-        def bind( v ):
-            if not v.soid_isbv and not v.soid_isflt and not v.soid_isdbl:
-                return True
+        amends += self.symbexec.postprocess( query, idx, self.E, self.S, self.D, symbls, varset )
 
-            for vl in varlist:
-                if str( v ) == re.sub( r'_ackermann![0-9]+', '', str( vl ) ):
-                    if v.soid_isflt or v.soid_isdbl:
-                        return ( z3.fpToIEEEBV( v ) == vl )
-                    else:
-                        return ( v == vl )
-
-            return True
-
-        if self.E:
-            amends += [ bind( e ) for e in self.E ]
-
-        if self.S:
-            amends += [ bind( s ) for s in self.S ]
-
-        if self.P:
-            amends += [ bind( p ) for p in self.P ]
-
-        amends += [ bind( s ) for s in symbls ]
         amended = [ z3.And( [ path ] + amends ) for path in self.paths ]
 
         def __inner():
@@ -332,7 +287,7 @@ class Oracle():
 
             'E':           self.E,
             'S':           self.S,
-            'P':           self.P,
+            'D':           self.D,
 
             'phi':         self.phi,
             'psi':         self.psi,
@@ -358,7 +313,7 @@ class Oracle():
 
         self.E = None    # environmental vars
         self.S = None    # state vars
-        self.P = None    # program vars
+        self.D = None    # decision vars
 
         self.phi  = None # environmental
         self.psi  = None # state
@@ -852,7 +807,7 @@ class Oracle():
 
         model = self.solver.model()
 
-        for var in (list( self.E ) if self.E else []) + (list( self.S ) if self.S else []) + (list( self.P ) if self.P else []):
+        for var in (list( self.E ) if self.E else []) + (list( self.S ) if self.S else []) + (list( self.D ) if self.D else []):
             model.eval( var, model_completion = True )
 
         return ( self.info, unsat, [ model ] )
@@ -881,7 +836,7 @@ class Oracle():
 
         model = self.solver.model()
 
-        for var in (list( self.E ) if self.E else []) + (list( self.S ) if self.S else []) + (list( self.P ) if self.P else []):
+        for var in (list( self.E ) if self.E else []) + (list( self.S ) if self.S else []) + (list( self.D ) if self.D else []):
             model.eval( var, model_completion = True )
 
         return ( self.info, not unsat, [ model ] )
@@ -999,12 +954,12 @@ def model_recurse( expr, tier = 3 ):
 #
 # pretty encode a model as a counterexample or counterfactual
 #
-def model_encode( E, S, P, model ):
+def model_encode( E, S, D, model ):
     vs = [ d for d in model.decls() if '__soid__' not in d.name() ]
 
     Es = []
     Ss = []
-    Ps = []
+    Ds = []
     for v in vs:
         val = model_recurse( model[ v ] )
 
@@ -1014,8 +969,8 @@ def model_encode( E, S, P, model ):
             refs += [ vr for vr in E if str( vr ) == v.name() ]
         if S:
             refs += [ vr for vr in S if str( vr ) == v.name() ]
-        if P:
-            refs += [ vr for vr in P if str( vr ) == v.name() ]
+        if D:
+            refs += [ vr for vr in D if str( vr ) == v.name() ]
         try:
             ref = refs.pop()
         except:
@@ -1023,7 +978,7 @@ def model_encode( E, S, P, model ):
         btype = ref.soid_base
         name  = v.name()
 
-        if btype == 'bool':
+        if btype == 'bool' or hasattr( ref, 'soid_isbool' ) and ref.soid_isbool:
             val = soidlib.symbols.true if val == 1 else soidlib.symbols.false
 
         if btype == 'u32':
@@ -1040,7 +995,7 @@ def model_encode( E, S, P, model ):
             for iref in E:
                 try:
                     if ref == iref:
-                        Es.append((name, val))
+                        Es.append( ( name, val ) )
                 except:
                     pass
 
@@ -1048,23 +1003,23 @@ def model_encode( E, S, P, model ):
             for iref in S:
                 try:
                     if ref == iref:
-                        Ss.append((name, val))
+                        Ss.append( ( name, val ) )
                 except:
                     pass
 
-        elif P:
-            for iref in P:
+        elif D:
+            for iref in D:
                 try:
                     if ref == iref:
-                        Ps.append((name, val))
+                        Ds.append( ( name, val ) )
                 except:
                     pass
 
     encoded = { 'E' : sorted( Es,  key = lambda x: x[ 0 ] ),
                 'S' : sorted( Ss,  key = lambda x: x[ 0 ] ),
-                'P' : sorted( Ps,  key = lambda x: x[ 0 ] ),
+                'D' : sorted( Ds,  key = lambda x: x[ 0 ] ),
                 'util' : {
-                    'max_name_len' : max( [ len( name[ 0 ] ) for name in Es + Ss + Ps ] )
+                    'max_name_len' : max( [ len( name[ 0 ] ) for name in Es + Ss + Ds ] )
                 } }
 
     return encoded
@@ -1078,13 +1033,13 @@ def model_encode( E, S, P, model ):
 def model_pp( encoded ):
     mnl = encoded[ 'util' ][ 'max_name_len' ]
 
-    for (name, val) in encoded[ 'E' ]:
+    for ( name, val ) in encoded[ 'E' ]:
         print( f'\n\t                 {name.rjust( mnl )}. {val}' )
     print( f'\n' )
-    for (name, val) in encoded[ 'S' ]:
+    for ( name, val ) in encoded[ 'S' ]:
         print( f'\n\t                 {name.rjust( mnl )}. {val}' )
     print( f'\n' )
-    for (name, val) in encoded[ 'P' ]:
+    for ( name, val ) in encoded[ 'D' ]:
         print( f'\n\t                 {name.rjust( mnl )}. {val}' )
     print( f'\n' )
 
@@ -1225,10 +1180,17 @@ def parse_args():
 
     parser = argparse.ArgumentParser( description = 'SMT-based oracles for investigating decisions.' )
 
-    parser.add_argument( '-m', '--make', action = 'store', type = str, default = None, dest = 'make', required = True, \
-                         help = 'Location of program makefile; if not a resolveable path soid will attempt to load ./Makefile.' )
-    parser.add_argument( '-qs', '-queries', action = 'store', type = str, default = None, dest = 'queries', required = True, \
+    group = parser.add_mutually_exclusive_group( required = True )
+    group.add_argument( '-m', '--make', action = 'store', type = str, default = None, dest = 'make', \
+                         help = 'Location of program Makefile; if not a resolveable path soid will attempt to load ./Makefile.' )
+    group.add_argument( '-p', '--path', action = 'store', type = str, default = None, dest = 'make', \
+                         help = 'Path for program invocation; if not a resolveable path soid will attempt to load ./Makefile.' )
+
+    parser.add_argument( '-qs', '--queries', action = 'store', type = str, default = None, dest = 'queries', required = True, \
                          help = 'Location of queries directory; if not a resolveable path soid will attempt to use ./')
+    parser.add_argument( '-se', '--symbexec', action = 'store', type = str, default = 'klee', dest = 'symbexec', \
+                         help = 'Symbolic execution engine. Defaults to KLEE(-Float).')
+
 
     args = parser.parse_args()
     args.queries = args.queries.rstrip('/')
@@ -1272,28 +1234,31 @@ def extract( qs, args, oracle, queue = [] ):
 ###########################
 
 
-def invoke( oracle, make_path, query, idx = None ):
+def invoke( oracle, path, query, idx = None, symbexec = 'klee' ):
+
+    if symbexec:
+        oracle.set_engine( symbexec, path )
 
     ust, cst = resource.getrusage(resource.RUSAGE_SELF), resource.getrusage(resource.RUSAGE_CHILDREN)
     oracle.load( query )
-    oracle.ld_agnt( make_path, idx )
+    oracle.ld_agnt( query, idx )
 
     info, res, models = oracle.run()
     ued, ced = resource.getrusage(resource.RUSAGE_SELF), resource.getrusage(resource.RUSAGE_CHILDREN)
     oracle.resources[ 'time' ][ 'total' ] = (ued.ru_utime - ust.ru_utime) + (ced.ru_utime - cst.ru_utime)
 
     model = models[ 0 ] if models else None
-    models = { 'raw' : model, 'pp' : model_encode( info[ 'E' ], info[ 'S' ], info[ 'P' ], model ) if model else None }
+    models = { 'raw' : model, 'pp' : model_encode( info[ 'E' ], info[ 'S' ], info[ 'D' ], model ) if model else None }
 
     return ( info, res, models, oracle.resources )
 
 
-def invoke_many( make_path, query_path ):
+def invoke_many( path, query_path, symbexec ):
 
     oracle = Oracle()
 
-    path, fn = os.path.split( query_path )
-    sys.path.insert( 0, path )
+    qpath, fn = os.path.split( query_path )
+    sys.path.insert( 0, qpath )
     qs = importlib.import_module( fn )
 
     queries = extract( qs, args, oracle )
@@ -1310,14 +1275,14 @@ def invoke_many( make_path, query_path ):
         if nxt.skip:
             continue
 
-        yield invoke( oracle, make_path, nxt, idx )
+        yield invoke( oracle, path, nxt, idx, symbexec )
 
 
 if __name__ == '__main__':
     import soidlib
 
     args = parse_args()
-    outs = invoke_many( args.make, args.queries )
+    outs = invoke_many( args.make, args.queries, args.symbexec )
 
     for ( info, res, model, resources ) in outs:
 

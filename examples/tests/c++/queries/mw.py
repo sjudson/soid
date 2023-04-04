@@ -60,10 +60,10 @@ def declare():
 
     S = { 'started'  : soidlib.types.bool( 'started' ) }
 
-    P = { 'decision' : soidlib.types.u32( 'decision', pp = { '0' : 'push start',
+    D = { 'decision' : soidlib.types.u32( 'decision', pp = { '0' : 'push start',
                                                              '1' : 'push cancel',
                                                              '2' : 'open door',
                                                              '3' : 'close door',
                                                              '4' : 'do nothing'   } ) }
 
-    return E, S, P
+    return E, S, D

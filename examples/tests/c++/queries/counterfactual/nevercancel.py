@@ -25,5 +25,5 @@ def state( S ):
 
 
 @soid.register
-def behavior( E, S, P ):
-    return Equal( P.decision, cancel )
+def behavior( D ):
+    return Equal( D.decision, cancel )

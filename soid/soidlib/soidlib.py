@@ -719,13 +719,13 @@ class Soid():
 
         def __inner( *args, **kwargs ):
 
-            E, S, P = f( *args, **kwargs )
+            E, S, D = f( *args, **kwargs )
             if E:
                 self.oracle.E = self.__varset( E, Decl() )
             if S:
                 self.oracle.S = self.__varset( S, Decl() )
-            if P:
-                self.oracle.P = self.__varset( P, Decl() )
+            if D:
+                self.oracle.D = self.__varset( D, Decl() )
 
             # since bools get turned into arrays or bitvectors, constrain them to either 0 or 1
             def extend( vs ):
@@ -747,8 +747,8 @@ class Soid():
             Ss = list( self.oracle.S ) if self.oracle.S else []
             self.__Sext = extend( Ss )
 
-            Ps = list( self.oracle.P ) if self.oracle.P else []
-            self.__Pext = extend( Ps )
+            Ds = list( self.oracle.D ) if self.oracle.D else []
+            self.__Dext = extend( Ds )
 
             return
 
@@ -771,7 +771,7 @@ class Soid():
     # __reg_env
     #
     # decorator whose inner loads query environmental constraints
-    # we also tag on the extended type constraints for P (forcing bools to be bools, etc.)
+    # we also tag on the extended type constraints for V (forcing bools to be bools, etc.)
     #
     def __reg_env( self, f ):
         def __inner( *args, **kwargs ):
@@ -779,16 +779,17 @@ class Soid():
             if isinstance( eqn, bool ):
                 eqn = _fbool( eqn )
 
-            if self.__Eext == None and self.__Pext == None:
+            if self.__Eext == None and self.__Dext == None:
                 return eqn
 
             neqn = eqn
-            setattr( neqn, 'soid_pp', eqn.soid_pp )
 
             if self.__Eext != None:
                 neqn = And( neqn, self.__Eext )
-            if self.__Pext != None:
-                neqn = And( neqn, self.__Pext )
+            if self.__Dext != None:
+                neqn = And( neqn, self.__Dext )
+
+            setattr( neqn, 'soid_pp', eqn.soid_pp )
 
             return neqn
         self.__environmental = __inner

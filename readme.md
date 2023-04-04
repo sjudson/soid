@@ -103,13 +103,15 @@ $ source ./venv/bin/activate
 ```
 Then invoke the `soid` tool, specifying the source program makefile `-m` and the directory containing the python module with the queries `-qs`, e.g.,:
 ```
-$ ./soid/soid.py -vs -m ./examples/car/defensive/Makefile -qs ./examples/car/queries
+$ ./soid/soid.py -m ./examples/car/defensive/Makefile -qs ./examples/car/queries
 ```
-will execute the microwave example.
+will execute the car example.
 
 ##### options
 
-Soid current takes two options:
+Soid current takes four options:
 
 - `-m`, `--make`: the location of the source program makefile, defaults to `./Makefile`.
+- `-p`, `--path`: an alias for `-m` for symbolic execution engines that do not use makefiles.
 - `-qs`, `--queries`: the location of the queries formulated as a python package, defaults to `./`.
+- `-se`, `--symbexec`: symbolic execution engine, only 'klee' (the default) is supported.

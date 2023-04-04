@@ -12,9 +12,9 @@ soid = Soid( 'float test', counterfactual.single, priority = 1 )
 def declare():
     E = {}
     S = { 'x' : types.double( 'x' ) }
-    P = { 'y' : types.double( 'y' ) }
+    D = { 'y' : types.double( 'y' ) }
 
-    return E, S, P
+    return E, S, D
 
 
 @soid.register
@@ -33,5 +33,5 @@ def state( S ):
 
 
 @soid.register
-def behavior( P ):
-    return FP_LT( P.y, 1.0 )
+def behavior( D ):
+    return FP_LT( D.y, 1.0 )
