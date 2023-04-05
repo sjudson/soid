@@ -85,16 +85,6 @@ $ ./install-deps
 ```
 This will build `klee-uclibc`, `klee`, and `cvc5`, as well as setup a Python `virtualenv` with the necessary dependencies installed. It can take some time to run, but has very verbose output throughout the install process.
 
-##### soid codebase overview
-
-`soid` is composed of three main parts: the `soid` tool itself, `soidlib`, and `Symbolize`.
-
-The first part, the `soid` tool itself, lives at `./soid/soid`. It is a Python program that takes as input (i) the location of the makefile for a source program written in c++ with suitable symbolic execution annotations, and (ii) a set of queries formulated as a python package. It then executes the queries on the source program, and provides a detailed print out of the result.
-
-The second part, `soidlib`, refers to both a python library at `./soid/soidlib/soidlib.py` and c++ library at `./soid/soidlib/soidlib.h`. The python library supports writing queries, while the c++ library supports writing source programs amenable to analysis using soid (for the moment, it mostly just wraps `klee.h`).
-
-The last part, `Symbolize` at `./soid/symbolize/Symbolize.cpp`, is a currently in-progress component to autogenerate the annotations necessary for symbolic executions without requiring a programmer to manually alter the source program so that it can be used with soid/klee.
-
 ##### running soid
 
 To run `soid`, first enable the virtual environment created by the install, by

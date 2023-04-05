@@ -2,7 +2,7 @@
 
 from colorama import Fore, Style
 from collections import namedtuple
-from symbexec import KleeSymbExec
+from .symbexec import KleeSymbExec
 
 import os
 import os.path
