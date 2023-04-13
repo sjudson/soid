@@ -308,6 +308,8 @@ class Oracle():
     #
     def reset( self ):
 
+        z3.Z3_reset_memory()
+
         self.synth  = None
         self.solver = None
 
