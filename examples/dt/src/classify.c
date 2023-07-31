@@ -11,30 +11,59 @@ typedef struct Node {
 } Node;
 
 
-void parse_label( Node *n, char *label ) {
+int parse_label( Node *N, Agnode_t *n ) {
 
-  printf("%s\n", label);
+  char label[ 128 ];
+  strncpy( label, agget( n, "label" ), 128 );                // copy to work non-destructively
 
+  char idx;
   char *tok, *ptok;
 
-  tok = strtok( label, "\n" );
+  tok = strtok( label, "\\n" );
 
   // non-leaf
   if ( strncmp( tok, "x" , 1 ) == 0 ) {
+    idx = tok[ 2 ];
+    N->tidx = atoi( &idx );                                  // indicies are always single digits
+
     tok = strtok( tok, " " );
-    n->tidx = atoi( tok[ 2 ] );                              // indicies are always single digits
+    while( tok ) { ptok = tok; tok = strtok( NULL, " " );  } // iterate to end of test string
+    N->test = strtod( ptok, NULL );
 
-    while( tok ) { ptok = tok; tok = strtok( NULL, " " ); }  // iterate to end of test string
-    n->test = strtod( ptok );
-
-    return;
+    return 0;
   }
 
   // leaf
-  while ( tok ) { ptok = tok; tok = strtok( NULL, "\n" ); } // iterate to class string
+  while ( tok ) { ptok = tok; tok = strtok( NULL, "\\n" ); } // iterate to class string
   tok = strtok( ptok, " " );
-  while( tok ) { ptok = tok; tok = strtok( NULL, " " ); }   // iterate to end of class string
-  n->class = atoi( ptok );
+  while ( tok ) { ptok = tok; tok = strtok( NULL, " " ); }   // iterate to end of class string
+  N->class = atoi( ptok );
+
+  return 1;
+}
+
+
+void make_children( Agraph_t *g, Node *N, Agnode_t *n ) {
+
+  int leaf;
+  Agedge_t *el, *er;
+  Agnode_t *nl, *nr;
+
+  el = agfstedge( g, n );
+  er = agnxtedge( g, el, n );
+
+  nl = aghead( el );                                       // not sure why these are head and not tail
+  nr = aghead( er );
+
+  N->tchild = ( Node* ) malloc( sizeof( Node ) );
+  leaf = parse_label( N->tchild, nl );
+
+  if ( !leaf ) make_children( g, N->tchild, nl );
+
+  N->fchild = ( Node* ) malloc( sizeof( Node ) );
+  leaf = parse_label( N->fchild, nr );
+
+  if ( !leaf ) make_children( g, N->fchild, nr );
 
   return;
 }
@@ -48,19 +77,16 @@ void make_tree( Node *root ) {
   Agraph_t *g;
   g = agread( fp , NULL );
 
+  int leaf;
   Agnode_t *n;
-  Agedge_t *e;
+  Agedge_t *l, *r;
 
   n = agfstnode( g );
 
   root = ( Node* ) malloc( sizeof( Node ) );
-  parse_label( root, agget( n, "label" ) );
+  leaf = parse_label( root, n );
 
-  for ( n = agfstnode( g ); n; n = agnxtnode( g, n ) ) {
-    for ( e = agfstout( g, n ); e; e = agnxtout( g, e ) ) {
-      /* do something with e */
-    }
-  }
+  if ( !leaf ) make_children( g, root, n );
 
   fclose( fp );
   return;
