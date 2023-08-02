@@ -1,3 +1,5 @@
+#include <soidlib.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -79,12 +81,10 @@ void make_tree( Node *root ) {
   Agraph_t *g;
   g = agread( fp , NULL );
 
-  int leaf;
   Agnode_t *n;
-  Agedge_t *l, *r;
-
   n = agfstnode( g );
 
+  int leaf;
   leaf = parse_label( root, n );
 
   if ( !leaf ) make_children( g, root, n );
@@ -113,12 +113,45 @@ int main( int argc, char **argv ) {
   Node *root = ( Node* ) malloc( sizeof( Node ) );
   make_tree( root );
 
-  double data[ 9 ] = { 1.0, 199.0, 76.0, 43.0, 0.0, 54.0, 249.973, 1.394, 22.0 };
+  double data[ 9 ];
+  int cls, __soid__cls;
 
-  int cls = classify( root, data );
-  const char *clss[ 2 ] = { "FALSE", "TRUE" };
+  //double data[ 9 ] = { 1.0, 199.0, 76.0, 43.0, 0.0, 54.0, 249.973, 1.394, 22.0 };
+  klee_make_symbolic( &data[ 0 ], sizeof( data[ 0 ] ), "data0" );
+  klee_assume( data[ 0 ] == 1.0 );
 
-  printf( "Test Instance classified to %s\n", clss[ cls ] );
+  klee_make_symbolic( &data[ 1 ], sizeof( data[ 1 ] ), "data1" );
+  klee_assume( data[ 1 ] == 199.0 );
+
+  klee_make_symbolic( &data[ 2 ], sizeof( data[ 2 ] ), "data2" );
+  klee_assume( data[ 2 ] == 76.0 );
+
+  klee_make_symbolic( &data[ 3 ], sizeof( data[ 3 ] ), "data3" );
+  klee_assume( data[ 3 ] == 43.0 );
+
+  klee_make_symbolic( &data[ 4 ], sizeof( data[ 4 ] ), "data4" );
+  klee_assume( data[ 4 ] == 0.0 );
+
+  klee_make_symbolic( &data[ 5 ], sizeof( data[ 5 ] ), "data5" );
+  klee_assume( data[ 5 ] == 54.0 );
+
+  klee_make_symbolic( &data[ 6 ], sizeof( data[ 6 ] ), "data6" );
+  klee_assume( data[ 6 ] == 249.973 );
+
+  klee_make_symbolic( &data[ 7 ], sizeof( data[ 7 ] ), "data7" );
+  klee_assume( data[ 7 ] == 1.394 );
+
+  klee_make_symbolic( &data[ 8 ], sizeof( data[ 8 ] ), "data8" );
+  klee_assume( data[ 8 ] == 22.0 );
+
+  klee_make_symbolic( &__soid__cls, sizeof( __soid__cls ), "__soid__cls" );
+
+  cls = classify( root, data );
+
+  klee_assume( cls == __soid__cls );
+
+  //const char *clss[ 2 ] = { "FALSE", "TRUE" };
+  //printf( "Test Instance classified to %s\n", clss[ cls ] );
 
   return 0;
 }
