@@ -19,3 +19,6 @@
 [submodule "examples/gui/duckietown-soid"]
 	path = examples/gui/duckietown-soid
 	url = git@github.com:mattelacqua/duckietown-soid.git
+[submodule "deps/klee-uclibc-3"]
+	path = deps/klee-uclibc-3
+	url = git@github.com:klee/klee-uclibc.git

@@ -62,6 +62,10 @@ cd ./klee-uclibc
 ksucip="$(pwd)"
 cd ..
 
+cd ./klee-uclibc-3
+ksuc3ip="$(pwd)"
+cd ..
+
 mkdir ./build/libc++
 cd ./build/libc++
 cppip="$(pwd)"
@@ -186,11 +190,31 @@ mv ./clang ./llvm/tools
 mv ./clang-tools-extra ./llvm/tools/clang/tools
 cd ./build
 
-../llvm/configure --prefix=$llvmip/release --with-python=py2 --enable-cxx11
+cmake \
+    -DGCC_INSTALL_PREFIX=/usr/lib/gcc/x86_64-linux-gnu/10 \
+    -DCMAKE_INSTALL_PREFIX=$llvmip/release \
+    -Wno-dev \
+    ../llvm
+
 make -j2
 make install
 
 cd ../..
+
+#klee-uClibc for llvm3.4
+
+export LIBRARY_PATH=$LIBRARY_PATH:/usr/lib/gcc/x86_64-linux-gnu/10
+
+if [[ $machine -eq 0 ]]
+then
+    cd ./klee-uclibc-3
+    ./configure --make-llvm-lib --with-cc=$llvmip/release/bin/clang  --with-llvm-config=$llvmip/release/bin/llvm-config
+    make -j2
+    cd ..
+else
+    echo "Unable to configure uClibc and POSIX compatibility..."
+fi
+
 
 #klee-float
 
@@ -208,9 +232,9 @@ cd ./klee-float/build
 cmake \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DENABLE_KLEE_ASSERTS=ON \
-    -DENABLE_KLEE_UCLIBC=ON \
-    -DKLEE_UCLIBC_PATH=$ksucip \
     -DENABLE_POSIX_RUNTIME=OFF \
+    -DENABLE_KLEE_UCLIBC=ON \
+    -DKLEE_UCLIBC_PATH=$ksuc3ip \
     -DENABLE_SOLVER_Z3=ON \
     -DENABLE_TCMALLOC=OFF \
     -DLLVM_CONFIG_BINARY=$llvmip/release/bin/llvm-config \

@@ -1,17 +1,15 @@
-#include <soidlib.h>
+#include "tree.h"
 
+#include <math.h>
+
+#ifdef symbolic
+#include <soidlib.h>
+#endif
+
+#ifdef run
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 #include <graphviz/cgraph.h>
-
-typedef struct Node {
-  double test;
-  int    tidx;
-  int    class;
-  struct Node *tchild;
-  struct Node *fchild;
-} Node;
 
 
 int parse_label( Node *N, Agnode_t *n ) {
@@ -47,7 +45,36 @@ int parse_label( Node *N, Agnode_t *n ) {
 }
 
 
-void make_children( Agraph_t *g, Node *N, Agnode_t *n ) {
+void write_header( FILE *fpo ) {
+  fprintf( fpo, "#include \"tree.h\"\n\n#include <stdlib.h>\n\nvoid tree( Node *root ) {\n\n" );
+  return;
+}
+
+
+void write_node( FILE *fpo, Node *N ) {
+  // use pointer address as unique identifier
+  fprintf( fpo, "\tNode *x%llx = ( Node* ) malloc( sizeof( Node ) );\n", ( unsigned long long int ) N );
+  fprintf( fpo, "\tx%llx->test = %f;\n", ( unsigned long long int ) N, N->test );
+  fprintf( fpo, "\tx%llx->tidx = %d;\n", ( unsigned long long int ) N, N->tidx );
+  fprintf( fpo, "\tx%llx->class = %d;\n", ( unsigned long long int ) N, N->class );
+
+  if ( N->class == -1 ) {
+    fprintf( fpo, "\tx%llx->tchild = x%llx;\n", ( unsigned long long int ) N, ( unsigned long long int ) N->tchild );
+    fprintf( fpo, "\tx%llx->fchild = x%llx;\n", ( unsigned long long int ) N, ( unsigned long long int ) N->fchild );
+  }
+
+  fprintf( fpo, "\n" );
+  return;
+}
+
+
+void write_footer( FILE *fpo, Node *root ) {
+  fprintf( fpo, "\troot = x%llx;\n", ( unsigned long long int ) root );
+  fprintf( fpo, "\treturn;\n}" );
+  return;
+}
+
+void make_children( Agraph_t *g, Node *N, Agnode_t *n, FILE *fpo ) {
 
   int leaf;
   Agedge_t *el, *er;
@@ -62,12 +89,22 @@ void make_children( Agraph_t *g, Node *N, Agnode_t *n ) {
   N->tchild = ( Node* ) malloc( sizeof( Node ) );
   leaf = parse_label( N->tchild, nl );
 
-  if ( !leaf ) make_children( g, N->tchild, nl );
+  if ( !leaf ) {
+    make_children( g, N->tchild, nl, fpo );
+  } else {
+    write_node( fpo, N->tchild );
+  }
 
   N->fchild = ( Node* ) malloc( sizeof( Node ) );
   leaf = parse_label( N->fchild, nr );
 
-  if ( !leaf ) make_children( g, N->fchild, nr );
+  if ( !leaf ) {
+    make_children( g, N->fchild, nr, fpo );
+  } else {
+    write_node( fpo, N->fchild );
+  }
+
+  write_node( fpo, N );
 
   return;
 }
@@ -75,23 +112,34 @@ void make_children( Agraph_t *g, Node *N, Agnode_t *n ) {
 
 void make_tree( Node *root ) {
 
-  FILE *fp;
-  fp = fopen( "./classifier/tree/dt.dot", "r" );
+  FILE *fpi;
+  fpi = fopen( "./classifier/tree/dt.dot", "r" );
 
   Agraph_t *g;
-  g = agread( fp , NULL );
+  g = agread( fpi, NULL );
 
   Agnode_t *n;
+
   n = agfstnode( g );
 
   int leaf;
   leaf = parse_label( root, n );
 
-  if ( !leaf ) make_children( g, root, n );
+  FILE *fpo;
+  fpo = fopen( "./tree.c", "w" );
 
-  fclose( fp );
+  write_header( fpo );
+
+  if ( !leaf ) make_children( g, root, n, fpo );
+
+  write_node( fpo, root );
+  write_footer( fpo, root );
+
+  fclose( fpi );
+  fclose( fpo );
   return;
 }
+#endif
 
 
 int traverse( Node *N, double *fv ) {
@@ -108,15 +156,33 @@ int classify( Node *N, double *data ) {
 }
 
 
+#ifdef run
+
 int main( int argc, char **argv ) {
 
   Node *root = ( Node* ) malloc( sizeof( Node ) );
   make_tree( root );
 
+  double data[ 9 ] = { 1.0, 199.0, 76.0, 43.0, 0.0, 54.0, 249.973, 1.394, 22.0 };
+  int cls = classify( root, data );
+
+  const char *clss[ 2 ] = { "FALSE", "TRUE" };
+  printf( "Test Instance classified to %s\n", clss[ cls ] );
+
+  return 0;
+}
+
+#endif
+#ifdef symbolic
+
+int main ( int argc, char **argv ) {
+
   double data[ 9 ];
   int cls, __soid__cls;
 
-  //double data[ 9 ] = { 1.0, 199.0, 76.0, 43.0, 0.0, 54.0, 249.973, 1.394, 22.0 };
+  Node *root;
+  tree( root );
+
   klee_make_symbolic( &data[ 0 ], sizeof( data[ 0 ] ), "data0" );
   klee_assume( data[ 0 ] == 1.0 );
 
@@ -150,8 +216,7 @@ int main( int argc, char **argv ) {
 
   klee_assume( cls == __soid__cls );
 
-  //const char *clss[ 2 ] = { "FALSE", "TRUE" };
-  //printf( "Test Instance classified to %s\n", clss[ cls ] );
-
   return 0;
 }
+
+#endif
