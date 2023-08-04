@@ -69,7 +69,7 @@ ENV PATH=$CONDA_DIR/bin:$PATH
 
 # link to prebuilt libcxx
 RUN mkdir /usr/src/soid/deps/build
-RUN ln -s /usr/src/soid/deps/prebuilt/klee /usr/src/soid/deps/build/libc++
+RUN ln -s /usr/src/soid/deps/prebuilt/libc++ /usr/src/soid/deps/build/libc++
 
 # link to prebuilt klee-uclibc
 RUN ln -s /usr/src/soid/deps/prebuilt/klee-uclibc /usr/src/soid/deps/klee-uclibc
@@ -79,6 +79,9 @@ RUN ln -s /usr/src/soid/deps/prebuilt/klee /usr/src/soid/deps/klee
 
 # link to prebuilt llvm-project
 RUN ln -s /usr/src/soid/deps/prebuilt/llvm-project /usr/src/soid/deps/llvm-project
+
+# link to prebuilt klee-uclibc-3
+#RUN ln -s /usr/src/soid/deps/prebuilt/klee-uclibc-3 /usr/src/soid/deps/klee-uclibc-3
 
 # link to prebuilt klee-float
 RUN ln -s /usr/src/soid/deps/prebuilt/klee-float /usr/src/soid/deps/klee-float
