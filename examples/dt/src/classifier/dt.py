@@ -1,5 +1,6 @@
 import csv
 import random
+from copy import copy
 from sklearn.tree import DecisionTreeClassifier, export_graphviz
 from sklearn.model_selection import train_test_split
 
@@ -21,12 +22,23 @@ if __name__ == '__main__':
         cnames = [ '0', '1' ]
         export_graphviz( dtc, out_file = './tree/dt.dot', class_names = cnames )
 
+        i = None
+        for i, X in enumerate( Xtest ):
+            cX = copy(X)
+            cX[ 5 ] = 1.0
+
+            f  = dtc.predict([X])
+            cf = dtc.predict([cX])
+
+            if f != cf:
+                break
+
         avg_i = 54.0
         avg_m = 1.6256
         sqd_m = avg_m ** 2
 
-        xp = Xtest[ 0 ]
-        yp = ytest[ 0 ]
+        xp = Xtest[ i ]
+        yp = ytest[ i ]
 
         bmi = xp[ 5 ]
         kgs = bmi * sqd_m
