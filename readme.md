@@ -83,9 +83,9 @@ After this completes, all that is left is to run the dependency install script f
 ```
 $ ./install-deps
 ```
-This will a) setup a Python `virtualenv` with the necessary dependencies installed, b) build `klee-uclibc` and `klee`, for non-floating point analysis, and c) build `llvm3.4`, another version of `klee-uclibc`, and `klee-float` for floating point analysis. It can take some time to run, but has very verbose output throughout the install process.
+This will a) setup a Python `virtualenv` with the necessary dependencies installed, b) build `klee-uclibc` and `klee` for non-floating point analysis, and c) build `llvm3.4`, another version of `klee-uclibc`, and `klee-float` for floating point analysis. It can take some time to run, but has very verbose output throughout the install process.
 
-Additionally, it takes two options. First, `llvm3.4` can have issues finding a gcc install on the host machibe, so it may be necessary to specify exactly. For example, you may need to do something like
+Additionally, it takes two options. First, `llvm3.4` can have issues finding a gcc install on the host machine, so it may be necessary to specify an exact path. For example, you may need to do something like
 ```
 $ ./install-deps -g /usr/lib/gcc/x86_64-linux-gnu/10
 ```
