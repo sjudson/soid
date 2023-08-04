@@ -83,13 +83,23 @@ After this completes, all that is left is to run the dependency install script f
 ```
 $ ./install-deps
 ```
-This will build `klee-uclibc`, `klee`, and `cvc5`, as well as setup a Python `virtualenv` with the necessary dependencies installed. It can take some time to run, but has very verbose output throughout the install process.
+This will a) setup a Python `virtualenv` with the necessary dependencies installed, b) build `klee-uclibc` and `klee`, for non-floating point analysis, and c) build `llvm3.4`, another version of `klee-uclibc`, and `klee-float` for floating point analysis. It can take some time to run, but has very verbose output throughout the install process.
+
+Additionally, it takes two options. First, `llvm3.4` can have issues finding a gcc install on the host machibe, so it may be necessary to specify exactly. For example, you may need to do something like
+```
+$ ./install-deps -g /usr/lib/gcc/x86_64-linux-gnu/10
+```
+or alternatively `--gcc-path` to get everything to build successfully. Also, you can run
+```
+$ ./install-deps -c
+```
+or alternatively `--with-cvc5` to also get a build of cvc5, for some synthesis functionality as yet not yet fully implemented into `soid`.
 
 ##### running soid
 
 To run `soid`, first enable the virtual environment created by the install, by
 ```
-$ source ./venv/bin/activate
+$ source ./deps/venv/bin/activate
 ```
 Then invoke the `soid` tool, specifying the source program makefile `-m` and the directory containing the python module with the queries `-qs`, e.g.,:
 ```

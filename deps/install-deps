@@ -1,18 +1,20 @@
 #!/bin/bash
 
-SHORT=c
-LONG=with-cvc5
+SHORT=c,g
+LONG=with-cvc5,gcc-path
 OPTS=$(getopt -a -n install-deps --options $SHORT --longoptions $LONG -- "$@")
 
 cvc5=0
+pgcc=0
+gcc=""
 
 while :
 do
     case "$1" in
         -c | --with-cvc5)
-            cvc5=1
-            break
-            ;;
+            cvc5=1; shift 1;;
+        -g | --gcc-path)
+            pgcc=1; gcc=($2); shift 2;;
         --)
             shift;
             break
@@ -28,6 +30,13 @@ then
     echo "Building with cvc5."
 else
     echo "Building without cvc5 (no synthesis support)."
+fi
+
+if [[ $pgcc -eq 1 ]]
+then
+    echo "Using custom GCC path $gcc."
+else
+    echo "Building without custom gcc path."
 fi
 
 # setup virtualenv and python depts
@@ -190,7 +199,12 @@ mv ./clang ./llvm/tools
 mv ./clang-tools-extra ./llvm/tools/clang/tools
 cd ./build
 
-../llvm/configure --prefix=$llvmip/release --with-gcc-toolchain=/usr/lib/gcc/x86_64-linux-gnu/10 --enable-cxx11
+if [[ $pgcc -eq 1 ]]
+then
+    ../llvm/configure --prefix=$llvmip/release --with-gcc-toolchain=$gcc --enable-cxx11
+else
+    ../llvm/configure --prefix=$llvmip/release --enable-cxx11
+fi
 
 make -j2
 make install
@@ -199,8 +213,11 @@ cd ../..
 
 #klee-uClibc for llvm3.4
 
-export COMPILER_PATH=$COMPILER_PATH:/usr/lib/gcc/x86_64-linux-gnu/10
-export LIBRARY_PATH=$LIBRARY_PATH:/usr/lib/gcc/x86_64-linux-gnu/10
+if [[ $pgcc -eq 1 ]]
+then
+    export COMPILER_PATH=$COMPILER_PATH:$gcc
+    export LIBRARY_PATH=$LIBRARY_PATH:$gcc
+fi
 
 if [[ $machine -eq 0 ]]
 then
