@@ -20,6 +20,6 @@
 #define DEFAULT_SYSROOT ""
 
 /* Directory where gcc is installed. */
-#define GCC_INSTALL_PREFIX ""
+#define GCC_INSTALL_PREFIX "/usr/lib/gcc/x86_64-linux-gnu/11/"
 
 #endif

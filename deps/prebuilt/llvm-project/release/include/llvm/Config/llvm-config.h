@@ -21,7 +21,7 @@
 #define LLVM_BINDIR "/usr/src/soid/deps/llvm-project/release/bin"
 
 /* Time at which LLVM was configured */
-#define LLVM_CONFIGTIME "Sun Feb  5 03:51:35 UTC 2023"
+#define LLVM_CONFIGTIME "Sat Aug  5 01:23:09 UTC 2023"
 
 /* Installation directory for data files */
 #define LLVM_DATADIR "/usr/src/soid/deps/llvm-project/release/share/llvm"

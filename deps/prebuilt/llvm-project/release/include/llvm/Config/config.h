@@ -32,7 +32,7 @@
 #define ENABLE_TIMESTAMPS 1
 
 /* Directory where gcc is installed. */
-#define GCC_INSTALL_PREFIX ""
+#define GCC_INSTALL_PREFIX "/usr/lib/gcc/x86_64-linux-gnu/11/"
 
 /* Define to 1 if you have the `arc4random' function. */
 /* #undef HAVE_ARC4RANDOM */
@@ -535,7 +535,7 @@
 #define LLVM_BINDIR "/usr/src/soid/deps/llvm-project/release/bin"
 
 /* Time at which LLVM was configured */
-#define LLVM_CONFIGTIME "Sun Feb  5 03:51:35 UTC 2023"
+#define LLVM_CONFIGTIME "Sat Aug  5 01:23:09 UTC 2023"
 
 /* Installation directory for data files */
 #define LLVM_DATADIR "/usr/src/soid/deps/llvm-project/release/share/llvm"
