@@ -5,6 +5,7 @@
 **/deps/klee
 **/deps/klee-float
 **/deps/klee-uclibc
+**/deps/klee-uclibc-3
 **/deps/llvm-project
 **/deps/tomlplusplus
 **/deps/install-deps
