@@ -1,0 +1,307 @@
+#!/usr/bin/env python
+
+from colorama import Fore, Style
+
+import soid
+import soid.soidlib
+
+import os
+import os.path
+import sys
+import argparse
+import importlib
+import types
+import functools
+
+
+
+##########################
+###### PP FUNCTIONS ######
+##########################
+
+
+
+####
+# query_pp
+#
+# pretty print logic formulas
+# todo: either get beautifHOL working or reimplement it in Python
+#
+def query_pp( name, query ):
+
+    if isinstance( query, bool ):
+        formula = soidlib.symbols.true if query else soidlib.symbols.false
+    else:
+        formula = query.soid_pp
+
+    if name == 'phi':
+        print( f'\n\t                 environmental ({soidlib.symbols.phi}). {formula}' )
+    elif name == 'psi':
+        print( f'\n\t                         state ({soidlib.symbols.psi}). {formula}' )
+    elif name == 'beta':
+        print( f'\n\t                      behavior ({soidlib.symbols.beta}). {formula}' )
+
+    return
+
+
+####
+# model_pp
+#
+# pretty print a model as a counterexample or counterfactual
+#
+def model_pp( encoded ):
+    mnl = encoded[ 'util' ][ 'max_name_len' ]
+
+    for ( name, val ) in encoded[ 'E' ]:
+        print( f'\n\t                 {name.rjust( mnl )}. {val}' )
+    print( f'\n' )
+    for ( name, val ) in encoded[ 'S' ]:
+        print( f'\n\t                 {name.rjust( mnl )}. {val}' )
+    print( f'\n' )
+    for ( name, val ) in encoded[ 'D' ]:
+        print( f'\n\t                 {name.rjust( mnl )}. {val}' )
+    print( f'\n' )
+
+    return
+
+
+####
+# synthd_pp
+#
+# pretty print a synthesized function (formula)
+# copied from https://github.com/cvc5/cvc5/blob/39f90ff035a5e5024fe0cd11b965f1103d83e88d/examples/api/python/utils.py
+#
+def synthd_pp( terms, solutions ):
+
+    def define_fun_to_string( f, params, body ):
+        sort = f.getSort()
+        if sort.isFunction():
+            sort = f.getSort().getFunctionCodomainSort()
+            result = ""
+            result += "(define-fun " + str( f ) + " ("
+            for param in params:
+                if i > 0:
+                    result += " "
+                else:
+                    result += "(" + str( param ) + " " + str( param.getSort() ) + ")"
+        result += ") " + str( sort ) + " " + str( body ) + ")"
+        return result
+
+
+    result = ""
+    for i, term in enumerate( terms ):
+        params = []
+        if solutions[ i ].getKind() == pycvc5.kinds.Lambda:
+            params += solutions[ i ][ 0 ]
+            body    = solutions[ i ][ 1 ]
+        result += "  " + define_fun_to_string( term, params, body ) + "\n"
+        print( result )
+
+    return
+
+
+####
+# verif_pp
+#
+# pretty print output of verification query
+#
+def verif_pp( info, unsat, model = None, resources = None ):
+    ex = soidlib.symbols.true if info[ 'expect' ] else soidlib.symbols.false
+    eq = ( unsat == info[ 'expect' ] )
+
+    mark  = chr( int( '2713', 16 ) ) if eq else chr( int( '2717', 16 ) )
+    color = Fore.GREEN if eq else Fore.RED
+
+    print(
+        f'\n\t                                                                                                              '
+        f'\n\t{str(info[ "count" ]).zfill(7)}.  |  name: {info[ "name" ]}  |  type: verification                            '
+    )
+    print( info[ 'description' ] )
+    print(
+        f'\n\t                expect: {ex}  |  result: [{color}{mark}{Style.RESET_ALL}]                                     '
+        f'\n\t                                                                                                              '
+        f'\n\t                time: {resources[ "time" ][ "total" ]:.2f}s total                                             '
+        f'\n\t                time: {resources[ "time" ][ "symbolic" ]:.2f}s on symbolic execution                          '
+        f'\n\t                time: {resources[ "time" ][ "verification" ]:.2f}s on query evaluation                        '
+        f'\n\t                                                                                                              '
+        f'\n\tconstraints:                                                                                                  '
+        f'\n\t                                                                                                              '
+    )
+
+    query_pp( 'phi',  info[ 'phi' ]() )
+    query_pp( 'psi',  info[ 'psi' ]() )
+    query_pp( 'beta', info[ 'beta' ]() )
+
+    if not unsat and model:
+        print(
+            f'\n\t                                                                                                          '
+            f'\n\tcounterexample:                                                                                           '
+            f'\n\t                                                                                                          '
+        )
+        model_pp( model )
+
+    print(
+        f'\n\t                                                                                                              '
+    )
+
+
+####
+# scf_pp
+#
+# pretty print output of single counterfactual query
+#
+def scf_pp( info, sat, model = None, resources = None ):
+    ex = soidlib.symbols.true if info[ 'expect' ] else soidlib.symbols.false
+    eq = ( sat == info[ 'expect' ] )
+
+    mark  = chr( int( '2713', 16 ) ) if eq else chr( int( '2717', 16 ) )
+    color = Fore.GREEN if eq else Fore.RED
+
+    print(
+        f'\n\t                                                                                                              '
+        f'\n\t{str(info[ "count" ]).zfill(7)}.  |  name: {info[ "name" ]}  |  type: counterfactual.single                   '
+    )
+    print( info[ 'description' ] )
+    print(
+        f'\n\t                expect: {ex}  |  result: [{color}{mark}{Style.RESET_ALL}]                                     '
+        f'\n\t                                                                                                              '
+        f'\n\t                time: {resources[ "time" ][ "total" ]:.2f}s total                                             '
+        f'\n\t                time: {resources[ "time" ][ "symbolic" ]:.2f}s on symbolic execution                          '
+        f'\n\t                time: {resources[ "time" ][ "verification" ]:.2f}s on query evaluation                        '
+        f'\n\t                                                                                                              '
+        f'\n\tconstraints:                                                                                                  '
+        f'\n\t                                                                                                              '
+    )
+
+    query_pp( 'phi',  info[ 'phi' ]() )
+    query_pp( 'psi',  info[ 'psi' ]() )
+    query_pp( 'beta', info[ 'beta' ]() )
+
+    if sat and model:
+        print(
+            f'\n\t                                                                                                          '
+            f'\n\tcounterfactual                                                                                            '
+            f'\n\t                                                                                                          '
+        )
+        model_pp( model )
+
+    print(
+        f'\n\t                                                                                                              '
+    )
+
+
+####
+# parse_args
+#
+# parse command line arguments
+#
+def parse_args():
+
+    parser = argparse.ArgumentParser( description = 'SMT-based oracles for investigating decisions.' )
+
+    group = parser.add_mutually_exclusive_group( required = True )
+    group.add_argument( '-m', '--make', action = 'store', type = str, default = None, dest = 'make', \
+                         help = 'Location of program Makefile; if not a resolveable path soid will attempt to load ./Makefile.' )
+    group.add_argument( '-p', '--path', action = 'store', type = str, default = None, dest = 'make', \
+                         help = 'Path for program invocation; if not a resolveable path soid will attempt to load ./Makefile.' )
+
+    parser.add_argument( '-qs', '--queries', action = 'store', type = str, default = None, dest = 'queries', required = True, \
+                         help = 'Location of queries directory; if not a resolveable path soid will attempt to use ./')
+    parser.add_argument( '-se', '--symbexec', action = 'store', type = str, default = 'klee', dest = 'symbexec', \
+                         help = 'Symbolic execution engine. Defaults to KLEE(-Float).')
+
+
+    args = parser.parse_args()
+    args.queries = args.queries.rstrip('/')
+
+    if not os.path.exists( args.make ):
+        args.make  = './Makefile'
+    if not os.path.exists( args.queries ):
+        args.queries = './'
+
+    return args
+
+
+####
+# extract
+#
+# recurse through queries module and find all queries
+#
+def extract( qs, args, oracle, queue = [] ):
+
+    if 'Soid' not in dir( qs ) and 'soidlib' not in dir( qs ):
+        return queue
+
+    for name in dir( qs ):
+        obj = getattr( qs, name )
+
+        if callable( obj ) and name == 'introduction':
+            oracle.introduction = obj()  # todo: handle error case
+
+        if isinstance( obj, types.ModuleType ):
+            queue = extract( obj, args, oracle, queue )
+
+        if isinstance( obj, soidlib.Soid ):
+            queue.append( obj )
+
+    return queue
+
+
+
+###########################
+##### MAIN INTERFACE ######
+###########################
+
+
+
+def invoke_many( path, query_path, symbexec ):
+
+    oracle = soid.Oracle()
+
+    qpath, fn = os.path.split( query_path )
+    sys.path.insert( 0, qpath )
+    qs = importlib.import_module( fn )
+
+    queries = extract( qs, args, oracle )
+    queries.sort( key = lambda query: query.priority, reverse = True )
+
+    yield ( { 'type': soidlib.introduction, 'description': oracle.introduction }, None, None, None )
+
+    idx = 0
+    while queries:
+        idx += 1
+
+        nxt = queries.pop()
+
+        if nxt.skip:
+            continue
+
+        yield invoke( oracle, path, nxt, idx, symbexec )
+
+
+if __name__ == '__main__':
+
+    args = parse_args()
+    outs = invoke_many( args.make, args.queries, args.symbexec )
+
+    for ( info, res, model, resources ) in outs:
+
+        if info[ 'type' ] == soidlib.introduction:
+            print( info[ 'description' ] + '\n\n' )
+            continue
+
+        if info[ 'type' ] == soidlib.verification:
+            verif_pp( info, res, model[ 'pp' ], resources )
+            continue
+
+        if info[ 'type' ] == soidlib.counterfactual.single:
+            scf_pp( info, res, model[ 'pp' ], resources )
+            continue
+
+        try:
+            if 'pycvc5' not in globals():
+                print( '##################\n## IMPORTING CVC5 FOR SYNTHESIS #\n##################\n\n' )
+                import pycvc5
+
+        except ModuleNotFoundError:
+            print( '##################\n## SKIPPING QUERY, NO SYNTHESIS SUPPORT #\n##################\n\n' )

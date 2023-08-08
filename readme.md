@@ -95,15 +95,15 @@ $ ./install-deps -c
 ```
 or alternatively `--with-cvc5` to also get a build of cvc5, for some synthesis functionality as yet not yet fully implemented into `soid`.
 
-##### running soid
+##### running soid from the command line
 
 To run `soid`, first enable the virtual environment created by the install, by
 ```
 $ source ./deps/venv/bin/activate
 ```
-Then invoke the `soid` tool, specifying the source program makefile `-m` and the directory containing the python module with the queries `-qs`, e.g.,:
+Then invoke the `soid` tool using the cli interface, specifying the source program makefile `-m` and the directory containing the python module with the queries `-qs`, e.g.,:
 ```
-$ ./soid/soid.py -m ./examples/car/defensive/Makefile -qs ./examples/car/queries
+$ ./scripts/soidcli -m ./examples/car/defensive/Makefile -qs ./examples/car/queries
 ```
 will execute the car example.
 
