@@ -55,9 +55,9 @@ services:
     profiles:
       - gui-crash
 
-  benchmarks:
+  gui-benchmarks:
     image: registry.gitlab.com/rose-yale/soid:latest
-    container_name: soid_benchmarks
+    container_name: gui_soid_benchmarks
     network_mode: "host"
     ipc: "host"
     volumes:
@@ -71,4 +71,22 @@ services:
     privileged: true
     command: /bin/bash -c "cd /usr/src/soid/examples/gui/duckietown-soid/ && ./runner"
     profiles:
-      - benchmarks
+      - gui-benchmarks
+
+  dt-benchmarks:
+    image: registry.gitlab.com/rose-yale/soid:latest
+    container_name: dt_soid_benchmarks
+    network_mode: "host"
+    ipc: "host"
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    environment:
+      - DISPLAY=unix$DISPLAY
+      - QT_X11_NO_MITSHM=1
+    devices:
+      - "/dev/snd:/dev/snd"
+      - "/dev/dri:/dev/dri"
+    privileged: true
+    command: /bin/bash -c "cd /usr/src/soid/examples/dt/ && ./runner"
+    profiles:
+      - dt-benchmarks
