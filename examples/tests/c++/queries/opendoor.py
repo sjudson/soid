@@ -1,4 +1,4 @@
-from soidlib import *
+from soid.soidlib import *
 
 from .mw import declare, dopen
 

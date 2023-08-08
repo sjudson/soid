@@ -22,7 +22,7 @@ symbolic:
 ifndef SOID_QUERY
 	$(cc) -Dsymbolic -I $(SOIDLIB) -I $(KLEE) -emit-llvm -c -g -O0 ./classify.c -o - | $(opt) -mem2reg -simplifycfg -S -o $(BC2)
 else
-	$(cc) -Dsymbolic -I $(SOIDLIB) -I $(KLEE) -emit-llvm -c -g -O0 ./variants/$(SOID_QUERY).cpp -o - | $(opt) -mem2reg -simplifycfg -S -o $(BC2)
+	$(cc) -Dsymbolic -I $(SOIDLIB) -I $(KLEE) -emit-llvm -c -g -O0 ./variants/classify.$(SOID_QUERY).c -o - | $(opt) -mem2reg -simplifycfg -S -o $(BC2)
 endif
 	$(link) $(BC1) $(BC2) -o $(BC)
 	$(KEXEC) -libc=uclibc -silent-klee-assume --write-smt2s -use-merge $(BC)

@@ -260,5 +260,8 @@ cmake \
     $kfsip
 
 make -j2
+cd ../../..
+
+pip install -e .
 
 deactivate

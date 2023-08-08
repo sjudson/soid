@@ -1,4 +1,4 @@
-import soidlib
+import soid.soidlib as soidlib
 
 cardinalPPs = { '0' : 'North', '1' : 'East', '2' : 'South', '3' : 'West' }
 cardinalIDs = { 'North' : 0, 'East' : 1, 'South' : 2, 'West' : 3 }

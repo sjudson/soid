@@ -1,4 +1,4 @@
-import soidlib
+import soid.soidlib as soidlib
 
 start  = 0
 cancel = 1

@@ -3,7 +3,7 @@
 from colorama import Fore, Style
 
 import soid
-import soid.soidlib
+import soid.soidlib as soidlib
 
 import os
 import os.path
@@ -276,7 +276,7 @@ def invoke_many( path, query_path, symbexec ):
         if nxt.skip:
             continue
 
-        yield invoke( oracle, path, nxt, idx, symbexec )
+        yield soid.invoke( oracle, path, nxt, idx, symbexec )
 
 
 if __name__ == '__main__':
