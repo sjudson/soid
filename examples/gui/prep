@@ -30,5 +30,7 @@ ln -s /opt/conda/envs/duckietown/lib/libstdc++.so.6 /opt/conda/envs/duckietown/l
 
 mv /usr/src/soid/examples/gui/numpy_patch.py /opt/conda/envs/duckietown/lib/python3.9/site-packages/contracts/library/array_ops.py
 mv /usr/src/soid/examples/gui/geometry_patch.py /opt/conda/envs/duckietown/lib/python3.9/site-packages/geometry/poses.py
+mv /usr/src/soid/examples/gui/geometry_utils_patch.py /opt/conda/envs/duckietown/lib/python3.9/site-packages/geometry/utils/numpy_backport.py
+
 
 npm install --legacy-peer-deps /usr/src/soid/examples/gui/duckietown-soid/src/webserver/web-gui
