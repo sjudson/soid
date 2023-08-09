@@ -91,7 +91,7 @@ RUN pip install --no-cache-dir -r /usr/src/soid/requirements.txt && \
     pip install pyglet==1.5.15
 
 # install soid
-RUN pip install .
+RUN pip install -e .
 
 # prep duckietown-soid
 RUN mv /usr/src/soid/examples/gui/prep /usr/src/soid/examples/gui/duckietown-soid/prep

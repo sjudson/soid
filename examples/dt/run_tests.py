@@ -78,7 +78,7 @@ $$\\begin{tabularx}{\\textwidth}{c *{5}{Y}}
 
     base += execute(
         [
-            ( 'verify', '$\\varphi_{fact}$, \\textit{high risk?}', '\\fprop' ),
+            ( 'verify', '$\\varphi_{fact}$, \\textit{low risk?}', '\\fprop' ),
             ( 'weight', '$\\varphi^* \equiv \\varphi_{fact}[(\\texttt{height} = 54.0) \mapsto \\top]$, \\textit{ever high risk?}', '\cprop' ),
         ]
     )

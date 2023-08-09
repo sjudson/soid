@@ -5,11 +5,11 @@ from .classify import declare
 soid = Soid( 'verify', verification, priority = 1 )
 soid.register( declare )
 
-@soid.register
 def descriptor():
     return f'\n\tverifing output...'
 
-@soid.register
+soid.register( descriptor )
+
 def environmental( E ):
     return And( Equal ( E.Pregnancies,                1.0   ),
                 Equal ( E.Glucose,                  199.0   ),
@@ -21,10 +21,14 @@ def environmental( E ):
                 Equal ( E.DiabetesPedigreeFunction,   1.394 ),
                 Equal ( E.Age,                       22.0   ) )
 
-@soid.register
+soid.register( environmental )
+
 def state( S ):
     return True
 
-@soid.register
+soid.register( state )
+
 def behavior( D ):
     return Equal( D.cls, False )
+
+soid.register( behavior )

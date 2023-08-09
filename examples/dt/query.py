@@ -10,20 +10,22 @@ if __name__ == '__main__':
     test = sys.argv[ 1 ]
 
     if test == 'verify':
+        idx   = 1
         base  = verify
         query = soidlib.Soid( 'Decision Tree Query', soidlib.verification )
     else:
+        idx   = 2
         base  = weight
         query = soidlib.Soid( 'Decision Tree Query', soidlib.counterfactual.single )
-        query.falsified( base.falsified )
+        query.register( base.falsified )
 
     query.register( base.declare )
-    query.environmental( base.environmental )
-    query.state( base.state )
-    query.behavior( base.behavior )
+    query.register( base.environmental )
+    query.register( base.state )
+    query.register( base.behavior )
 
     oracle = soid.Oracle()
 
     print( f'Soid Results:' )
-    ( info, res, models, resources ) = soid.invoke( oracle, '/usr/src/soid/examples/dt/src/Makefile', query )
+    ( info, res, models, resources ) = soid.invoke( oracle, '/usr/src/soid/examples/dt/src/Makefile', query, idx )
     print( f'Result: {res} Resources: {resources}' )
