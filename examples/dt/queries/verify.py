@@ -16,7 +16,7 @@ def environmental( E ):
                 Equal ( E.BloodPressure,             76.0   ),
                 Equal ( E.SkinThickness,             43.0   ),
                 Equal ( E.Insulin,                    0.0   ),
-                Equal ( E.Height,                    54.0   ),
+                Equal ( E.Height,                    64.0   ),
                 Equal ( E.Weight,                   249.973 ),
                 Equal ( E.DiabetesPedigreeFunction,   1.394 ),
                 Equal ( E.Age,                       22.0   ) )

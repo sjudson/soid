@@ -33,7 +33,7 @@ if __name__ == '__main__':
             if f != cf:
                 break
 
-        avg_i = 54.0
+        avg_i = 64.0
         avg_m = 1.6256
         sqd_m = avg_m ** 2
 

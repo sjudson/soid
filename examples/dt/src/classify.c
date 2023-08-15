@@ -227,7 +227,7 @@ int main ( int argc, char **argv ) {
 
   double data5;
   klee_make_symbolic( &data5, sizeof( double ), "data5" );
-  klee_assume( data5 == 54.0 );
+  klee_assume( data5 == 64.0 );
   memcpy( data + 5, &data5, sizeof( double ) );
 
   double data6;
