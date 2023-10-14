@@ -1,0 +1,5 @@
+#! /bin/bash
+
+export SOID_PATH="/usr/src/soid"
+
+python /usr/src/soid/examples/other/run_tests.py
