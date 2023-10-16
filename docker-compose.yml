@@ -1,7 +1,7 @@
 version: "3.9"
 services:
   soid:
-    image: registry.gitlab.com/rose-yale/soid:latest
+    image: registry.gitlab.com/rose-yale/soid:petal
     container_name: soid
     network_mode: "host"
     ipc: "host"
@@ -20,7 +20,7 @@ services:
       - cli
 
   soid-gui:
-    image: registry.gitlab.com/rose-yale/soid:latest
+    image: registry.gitlab.com/rose-yale/soid:petal
     container_name: soid_gui
     network_mode: "host"
     ipc: "host"
@@ -38,7 +38,7 @@ services:
       - gui
 
   soid-gui-crash:
-    image: registry.gitlab.com/rose-yale/soid:latest
+    image: registry.gitlab.com/rose-yale/soid:petal
     container_name: soid_gui_crash
     network_mode: "host"
     ipc: "host"
@@ -56,7 +56,7 @@ services:
       - gui-crash
 
   gui-benchmarks:
-    image: registry.gitlab.com/rose-yale/soid:latest
+    image: registry.gitlab.com/rose-yale/soid:petal
     container_name: gui_soid_benchmarks
     network_mode: "host"
     ipc: "host"
@@ -74,7 +74,7 @@ services:
       - gui-benchmarks
 
   dt-benchmarks:
-    image: registry.gitlab.com/rose-yale/soid:latest
+    image: registry.gitlab.com/rose-yale/soid:petal
     container_name: dt_soid_benchmarks
     network_mode: "host"
     ipc: "host"
@@ -92,7 +92,7 @@ services:
       - dt-benchmarks
 
   additional-benchmarks:
-    image: registry.gitlab.com/rose-yale/soid:latest
+    image: registry.gitlab.com/rose-yale/soid:petal
     container_name: additional_soid_benchmarks
     network_mode: "host"
     ipc: "host"
