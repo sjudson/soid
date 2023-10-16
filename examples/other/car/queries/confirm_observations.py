@@ -3,17 +3,17 @@ from soid.soidlib import *
 from .car import declare, cardinalIDs
 
 soid = Soid( 'confirm observations', verification, priority = 1 )
-soid.register( declare )
+#soid.register( declare )
 
 
-@soid.register
+#@soid.register
 def descriptor():
     return (
         f'\n\tquestion: Did the core logic decide on the action that was observed, or are we looking in the wrong place?        '
     )
 
 
-@soid.register
+#@soid.register
 def environmental( E ):
     return And( And( Equal( E.occupied_0_0, False ) ),
                 And( Equal( E.occupied_0_1, False ) ),
@@ -35,7 +35,7 @@ def environmental( E ):
                 And( Equal( E.occupied_3_3, False ) )  )
 
 
-@soid.register
+#@soid.register
 def state( S ):
     return And( Equal( S.curr_direction,     cardinalIDs[ 'North' ] ),
                 Equal( getattr( S, 'from' ), cardinalIDs[ 'South' ] ),
@@ -46,6 +46,6 @@ def state( S ):
                 Equal( S.has_turned,         False ) )
 
 
-@soid.register
+#@soid.register
 def behavior( D ):
     return Equal( D.move, True )

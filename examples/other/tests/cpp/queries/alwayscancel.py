@@ -4,10 +4,10 @@ from .mw import declare, cancel
 
 
 soid = Soid( 'always cancel', verification, priority = 1 )
-soid.register( declare )
+#soid.register( declare )
 
 
-@soid.register
+#@soid.register
 def descriptor():
     return (
         f'\n\tquestion: When the agent observes an error, will they always try to resolve it by canceling the error?            '
@@ -16,16 +16,16 @@ def descriptor():
     )
 
 
-@soid.register
+#@soid.register
 def environmental( E ):
     return Equal( E.error, True )
 
 
-@soid.register
+#@soid.register
 def state( S ):
     return True
 
 
-@soid.register
+#@soid.register
 def behavior( D ):
     return Equal( D.decision, cancel )

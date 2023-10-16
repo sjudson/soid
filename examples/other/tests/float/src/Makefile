@@ -1,14 +1,14 @@
-cc=../../../../deps/llvm-project/release/bin/clang -std=c99
-opt=../../../../deps/llvm-project/release/bin/opt
+cc=../../../../../deps/llvm-project/release/bin/clang -std=c99
+opt=../../../../../deps/llvm-project/release/bin/opt
 
 BC=./inter.bc
 
-KLEE=../../../../deps/klee-float/include/klee
-KEXEC=../../../../deps/klee-float/build/bin/klee
-PRE-LIB-KLEE=-L ../../../../deps/klee-float/build/lib/
+KLEE=../../../../../deps/klee-float/include/klee
+KEXEC=../../../../../deps/klee-float/build/bin/klee
+PRE-LIB-KLEE=-L ../../../../../deps/klee-float/build/lib/
 POST-LIB-KLEE=-lkleeRuntest
 
-SOIDLIB=../../../../soid/soidlib
+SOIDLIB=../../../../../soid/soidlib
 
 symbolic:
 	$(cc) -Dsymbolic -I $(SOIDLIB) -I $(KLEE) -emit-llvm -c -g -O0 ./float.c -o $(BC)

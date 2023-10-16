@@ -1,6 +1,6 @@
-cc=../../../deps/llvm-project/release/bin/clang -std=c99
-opt=../../../deps/llvm-project/release/bin/opt
-link=../../../deps/llvm-project/release/bin/llvm-link
+cc=../../../../deps/llvm-project/release/bin/clang -std=c99
+opt=../../../../deps/llvm-project/release/bin/opt
+link=../../../../deps/llvm-project/release/bin/llvm-link
 
 BC1=./inter1.bc
 BC2=./inter2.bc
@@ -10,12 +10,12 @@ BC5=./inter5.bc
 BC6=./inter6.bc
 BC=./inter.bc
 
-KLEE=../../../deps/klee-float/include/klee
-KEXEC=../../../deps/klee-float/build/bin/klee
-PRE-LIB-KLEE=-L ../../../deps/klee-float/build/lib/
+KLEE=../../../../deps/klee-float/include/klee
+KEXEC=../../../../deps/klee-float/build/bin/klee
+PRE-LIB-KLEE=-L ../../../../deps/klee-float/build/lib/
 POST-LIB-KLEE=-lkleeRuntest
 
-SOIDLIB=../../../soid/soidlib
+SOIDLIB=../../../../soid/soidlib
 
 symbolic:
 	$(cc) -Dsymbolic -I $(SOIDLIB) -I $(KLEE) -emit-llvm -c -g -O0 ./variants/car.c -o - | $(opt) -mem2reg -simplifycfg -S -o $(BC1)

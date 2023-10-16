@@ -11,7 +11,7 @@ def mark( tval ):
 def amend( base, i, nxt ):
     return ( base * i + nxt ) / ( i + 1.0 )
 
-def run( test, model ):
+def run( test ):
     pattern = re.compile( r'Result: ([A-Za-z]+) Resources: (\{.*\})', re.IGNORECASE )
 
     runs = []
@@ -36,11 +36,8 @@ def run( test, model ):
 def execute( tests ):
     add = ''
     for test in tests:
-        add += f'    {test[ 2 ]}{chr(92)}rule{{0pt}}{{2.5ex}} & {chr(92)}multicolumn{{5}}{{|l}}{{{test[ 1 ]}}}{chr(92)}{chr(92)}{chr(92)}midrule\n'
-
-        for model in [ 'dt' ]:
-            results = run( test[ 0 ], model )
-            add += f'    {model} & {mark(results[ 0 ])} & {results[ 1 ]:.3e} & { results[ 2 ]:.3e} & {results[ 3 ]:.3e} & {results[ 4 ]}{chr(92)}{chr(92)}{chr(92)}midrule\n'
+        results = run( test )
+        add += f'\, {test} \, & \, {results[ 1 ]:.3e} \, & \, {results[ 2 ]:.3e} \, & \, {results[ 3 ]:.3e} \, & \, {results[ 4 ]} \, \\'
 
     return add
 
@@ -52,36 +49,28 @@ if __name__ == '__main__':
 
 \\usepackage{amsmath}
 \\usepackage{amssymb}
-\\usepackage{pifont}
-\\newcommand{\cmark}{\ding{52}}%
-\\newcommand{\\xmark}{\ding{56}}%
-\\usepackage{tabularx, booktabs}
-\\newcolumntype{Y}{>{\centering\\arraybackslash}X}
 \\usepackage{fullpage}
-\\usepackage{hhline}
-
-\\newcommand{\counterfactual}{\ensuremath{%
-    \\mathrel{\Box\kern-1.5pt\\raise0.8pt\hbox{\\vspace{10pt}$\mathord{\\rightarrow}$}}}}
-\\newcommand{\\fprop}{\ensuremath{\\to_{\\mathcal{A}, t, \ell}}}
-\\newcommand{\cprop}{\ensuremath{\counterfactual_{\\mathcal{A}, t^*, \ell}}}
 
 \\begin{document}
 
-\scriptsize
-
-$$\\begin{tabularx}{\\textwidth}{c *{5}{Y}}
-
-\\toprule
-    \multicolumn{2}{c|}{} & \multicolumn{3}{c|}{\\vspace{1mm}\\underline{timings (avg.~$n = 10$)}} & \multicolumn{1}{c}{}\\\\
-    \\textbf{model} & \\textbf{output} & \\textbf{symbolic ($s$)} & \\textbf{solving ($s$)} & \\textbf{total ($s$)} & \\textbf{paths} \\\\[2pt]\midrule
+\begin{table}[!t]
+\centering
+\tiny
+\begin{tabular}{|l || c | c | c | c |}
+\hline
+\, name \, & \, symbolic (s) \, & \, solving (s) \, & \, total (s) \, & \, paths \, \\
+\hline
 '''
-
-    base += execute[ 'test.float.basic',
-                     'test.mw.cancel', 'test.mw.nothing', 'test.mw.open', 'test.mw.options', 'test.mw.close', 'test.mw.never',
-                     'test.car.confirm', 'test.car.causal' 'test.car.swapped', 'test.car.front', 'test.car.away' ] )
+    base += execute( [ 'test.float.basic',
+                       'test.mw.cancel', 'test.mw.nothing', 'test.mw.open', 'test.mw.options', 'test.mw.close', 'test.mw.never',
+                       'test.car.confirm', 'test.car.causal' 'test.car.swapped', 'test.car.front', 'test.car.away' ] )
     base += '''
-\\bottomrule
-\end{tabularx}$$
+\hline
+\end{tabular}
+\vspace{2mm}
+\caption{Additional Benchmarks (reported avg. $n = 10$).}
+\label{tbl:ab}
+\end{table}
 
 \end{document}
     '''

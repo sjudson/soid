@@ -8,7 +8,7 @@ def introduction():
 soid = Soid( 'float test', counterfactual.single, priority = 1 )
 
 
-@soid.register
+#@soid.register
 def declare():
     E = {}
     S = { 'x' : types.double( 'x' ) }
@@ -17,21 +17,21 @@ def declare():
     return E, S, D
 
 
-@soid.register
+#@soid.register
 def descriptor():
     return f'\n\ttesting...'
 
 
-@soid.register
+#@soid.register
 def environmental( E ):
     return True
 
 
-@soid.register
+#@soid.register
 def state( S ):
     return FP_GTE( S.x, 2.0 )
 
 
-@soid.register
+#@soid.register
 def behavior( D ):
     return FP_LT( D.y, 1.0 )

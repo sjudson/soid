@@ -4,8 +4,8 @@ import soid
 import soid.soidlib as soidlib
 
 from tests.float.queries import testfloat
-from tests.c++.queries import alwayscancel, nothing, opendoor, cancelorclose, closedoortocancel
-from tests.c++.queries.counterfactual import nevercancel
+from tests.cpp.queries import alwayscancel, nothing, opendoor, cancelorclose, closedoortocancel
+from tests.cpp.queries.counterfactual import nevercancel
 from car.queries import confirm_observations, causal_signaling, roles_swapped, in_front, away
 
 

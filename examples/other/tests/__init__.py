@@ -1,3 +1,3 @@
 import soid.soidlib as soidlib
 
-from . import c++, float
+from . import cpp, float

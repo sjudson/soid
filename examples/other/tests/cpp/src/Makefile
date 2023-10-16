@@ -2,12 +2,12 @@ cc=clang++-9 -std=c++14
 
 BC=./inter.bc
 
-KLEE=../../../klee/include/klee
-KEXEC=../../../klee/build/bin/klee
-PRE-LIB-KLEE=-L ../../../klee/build/lib/
+KLEE=../../../../../deps/klee/include/klee
+KEXEC=../../../../../deps/klee/build/bin/klee
+PRE-LIB-KLEE=-L ../../../../../deps/klee/build/lib/
 POST-LIB-KLEE=-lkleeRuntest
 
-SOIDLIB=../../../soid/soidlib
+SOIDLIB=../../../../../deps/soid/soidlib
 
 symbolic:
 ifndef SOID_QUERY

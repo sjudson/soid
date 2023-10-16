@@ -4,26 +4,26 @@ from ..mw import declare, cancel
 
 
 soid = Soid( 'never cancel', counterfactual.single, priority = 6, expect = False )
-soid.register( declare )
+#soid.register( declare )
 
 
-@soid.register
+#@soid.register
 def descriptor():
     return (
         f'\n\tquestion: Will the agent ever press cancel when not in error? If so, they may be pressing cancel incidentally.    '
     )
 
 
-@soid.register
+#@soid.register
 def environmental( E ):
     return Equal( E.error, False )
 
 
-@soid.register
+#@soid.register
 def state( S ):
     return True
 
 
-@soid.register
+#@soid.register
 def behavior( D ):
     return Equal( D.decision, cancel )

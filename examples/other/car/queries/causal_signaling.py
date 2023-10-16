@@ -3,10 +3,10 @@ from soid.soidlib import *
 from .car import declare, cardinalIDs
 
 soid = Soid( 'causal signaling', counterfactual.single, priority = 2 )
-soid.register( declare )
+#soid.register( declare )
 
 
-@soid.register
+#@soid.register
 def descriptor():
     return (
         f'\n\tquestion: If we do not specify how the other car signaled, can we generate a counterfactual where the ego car does'
@@ -26,7 +26,7 @@ def descriptor():
     )
 
 
-@soid.register
+#@soid.register
 def environmental( E ):
     return And( And( Equal( E.occupied_0_0, False ) ),
                 And( Equal( E.occupied_0_1, False ) ),
@@ -48,7 +48,7 @@ def environmental( E ):
                 And( Equal( E.occupied_3_3, False ) )  )
 
 
-@soid.register
+#@soid.register
 def state( S ):
     return And( Equal( S.curr_direction,     cardinalIDs[ 'North' ] ),
                 Equal( getattr( S, 'from' ), cardinalIDs[ 'South' ] ),
@@ -59,7 +59,7 @@ def state( S ):
                 Equal( S.has_turned,         False ) )
 
 
-@soid.register
+#@soid.register
 def falsified( E, S ):
     return And( And( Equal( E.occupied_0_0, False ) ),
                 And( Equal( E.occupied_0_1, False ) ),
@@ -86,6 +86,6 @@ def falsified( E, S ):
                      Equal( S.has_turned,         False ) ) )
 
 
-@soid.register
+#@soid.register
 def behavior( D ):
     return Equal( D.move, False )
