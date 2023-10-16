@@ -44,7 +44,7 @@ def _bv32arr( x ):
 # convert int variable to (Array (_ BitVec 32) (_ BitVec 1))
 #
 def _bv8arr( x ):
-    return z3.Array( x, z3.BitVecSort( 32 ), z3.BitVecSort( 1 ) )
+    return z3.Array( x, z3.BitVecSort( 32 ), z3.BitVecSort( 8 ) )
 
 
 ####
@@ -319,7 +319,7 @@ def _type_resolve( args ):
         if isinstance( arg, bool ):
             sargs[ i ] = symbols.true if arg else symbols.false
             oarg = largs[ 1 - i ]
-            largs[ i ] = _cint_to_bv32( arg ) if hasattr( oarg, 'soid_base' ) and not oarg.soid_base == 'bool' else _cbool_to_bv8( arg )
+            largs[ i ] = _cbool_to_bv8( arg ) if hasattr( oarg, 'soid_base' ) and not oarg.soid_base == 'bool' else _cint_to_bv32( arg )
 
         elif isinstance( arg, int ):
             sargs[ i ] = str( arg )
@@ -343,7 +343,10 @@ def _type_resolve( args ):
                 pretty = arg.soid_val_pp
 
         elif isinstance( arg, z3.z3.ArrayRef ):
-            largs[ i ] = _bv32arr_to_bv32( arg )
+            oarg = None
+            if len(args) > 1:
+                oarg = largs[ 1 - i ]
+            largs[ i ] = _bv8arr_to_bv8( arg ) if hasattr( oarg, 'soid_base' ) and oarg.soid_base == 'bool' else _bv32arr_to_bv32( arg )
 
             if hasattr( arg, 'soid_val_pp' ):
                 pretty = arg.soid_val_pp

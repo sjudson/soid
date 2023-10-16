@@ -90,3 +90,21 @@ services:
     command: /bin/bash -c "cd /usr/src/soid/examples/dt/ && ./runner"
     profiles:
       - dt-benchmarks
+
+  additional-benchmarks:
+    image: registry.gitlab.com/rose-yale/soid:latest
+    container_name: additional_soid_benchmarks
+    network_mode: "host"
+    ipc: "host"
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    environment:
+      - DISPLAY=unix$DISPLAY
+      - QT_X11_NO_MITSHM=1
+    devices:
+      - "/dev/snd:/dev/snd"
+      - "/dev/dri:/dev/dri"
+    privileged: true
+    command: /bin/bash -c "cd /usr/src/soid/examples/other/ && ./runner"
+    profiles:
+      - additional-benchmarks

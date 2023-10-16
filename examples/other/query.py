@@ -13,7 +13,7 @@ if __name__ == '__main__':
 
     test = sys.argv[ 1 ]
 
-    paths = [ '/usr/src/soid/examples/other/tests/float/src/Makefile', '/usr/src/soid/examples/other/tests/c++/float/Makefile', '/usr/src/soid/examples/other/car/defensive/Makefile' ]
+    paths = [ '/usr/src/soid/examples/other/tests/float/src/Makefile', '/usr/src/soid/examples/other/tests/cpp/src/Makefile', '/usr/src/soid/examples/other/car/defensive/Makefile' ]
 
     if test == 'test.float.basic':
         idx   = 1
