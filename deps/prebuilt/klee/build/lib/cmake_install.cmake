@@ -1,4 +1,4 @@
-# Install script for directory: /home/sej38/Documents/soid/deps/klee/lib
+# Install script for directory: /usr/src/soid/deps/klee/lib
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -44,12 +44,12 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("/home/sej38/Documents/soid/deps/klee/build/lib/Basic/cmake_install.cmake")
-  include("/home/sej38/Documents/soid/deps/klee/build/lib/Support/cmake_install.cmake")
-  include("/home/sej38/Documents/soid/deps/klee/build/lib/Expr/cmake_install.cmake")
-  include("/home/sej38/Documents/soid/deps/klee/build/lib/Solver/cmake_install.cmake")
-  include("/home/sej38/Documents/soid/deps/klee/build/lib/Module/cmake_install.cmake")
-  include("/home/sej38/Documents/soid/deps/klee/build/lib/Core/cmake_install.cmake")
+  include("/usr/src/soid/deps/klee/build/lib/Basic/cmake_install.cmake")
+  include("/usr/src/soid/deps/klee/build/lib/Support/cmake_install.cmake")
+  include("/usr/src/soid/deps/klee/build/lib/Expr/cmake_install.cmake")
+  include("/usr/src/soid/deps/klee/build/lib/Solver/cmake_install.cmake")
+  include("/usr/src/soid/deps/klee/build/lib/Module/cmake_install.cmake")
+  include("/usr/src/soid/deps/klee/build/lib/Core/cmake_install.cmake")
 
 endif()
 

@@ -1,4 +1,4 @@
-# Install script for directory: /home/sej38/Documents/soid/deps/klee/lib/Module
+# Install script for directory: /usr/src/soid/deps/klee/lib/Module
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
