@@ -319,7 +319,7 @@ def _type_resolve( args ):
         if isinstance( arg, bool ):
             sargs[ i ] = symbols.true if arg else symbols.false
             oarg = largs[ 1 - i ]
-            largs[ i ] = _cbool_to_bv8( arg ) if hasattr( oarg, 'soid_base' ) and not oarg.soid_base == 'bool' else _cint_to_bv32( arg )
+            largs[ i ] = _cbool_to_bv8( arg ) if hasattr( oarg, 'soid_base' ) and oarg.soid_base == 'bool' else _cint_to_bv32( arg )
 
         elif isinstance( arg, int ):
             sargs[ i ] = str( arg )
