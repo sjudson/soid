@@ -44,7 +44,7 @@ def execute( tests ):
 
 if __name__ == '__main__':
 
-        base = '''
+    base = '''
 \documentclass{article}
 
 \\usepackage{amsmath}
