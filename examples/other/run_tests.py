@@ -63,7 +63,7 @@ if __name__ == '__main__':
 '''
     base += execute( [ 'test.float.basic',
                        'test.mw.cancel', 'test.mw.nothing', 'test.mw.open', 'test.mw.options', 'test.mw.close', 'test.mw.never',
-                       'test.car.confirm', 'test.car.causal' 'test.car.swapped', 'test.car.front', 'test.car.away' ] )
+                       'test.car.confirm', 'test.car.causal', 'test.car.swapped', 'test.car.front', 'test.car.away' ] )
     base += '''
 \hline
 \end{tabular}

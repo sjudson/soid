@@ -17,10 +17,10 @@ class Oracle():
     def __init__( self ):
 
         self.runners = {
-            soidlib.verification              : self.verif,
-            soidlib.counterfactual.single     : self.scf,
-            soidlib.counterfactual.necessary  : self.nycf,
-            soidlib.counterfactual.sufficient : self.stcf,
+            soidlib.would : self.would,
+            soidlib.might : self.might,
+            #soidlib.counterfactual.necessary  : self.nycf,
+            #soidlib.counterfactual.sufficient : self.stcf,
             #soidlib.behavior.necessary        : self.nbv,
             #soidlib.behavior.sufficient       : self.sbv,
             #soidlib.agent                     : self.agent
@@ -253,7 +253,7 @@ class Oracle():
         # extract mangled
         self.name   = query.query_name
         self.type   = query.query_type
-        self.synth  = ( self.type not in [ soidlib.verification, soidlib.counterfactual.single ] )
+        self.synth  = ( self.type not in [ soidlib.would, soidlib.might ] )
         self.solver = z3.Solver() if not self.synth else pycvc5.Solver()
 
         query._Soid__declare()
@@ -321,7 +321,7 @@ class Oracle():
 
         self.info = None
 
-        self.resources = { 'time': { 'symbolic': None, 'verification': None, 'total': None }, 'paths' : None }
+        self.resources = { 'time': { 'symbolic': None, 'solving': None, 'total': None }, 'paths' : None }
 
         return
 
@@ -778,11 +778,11 @@ class Oracle():
 
 
     ####
-    # verif
+    # would
     #
-    # execute verification query
+    # execute would query
     #
-    def verif( self ):
+    def would( self ):
         self.solver.add(
             z3.Not(
                 z3.Implies(
@@ -792,7 +792,7 @@ class Oracle():
         ust, cst = resource.getrusage(resource.RUSAGE_SELF), resource.getrusage(resource.RUSAGE_CHILDREN)
         unsat = ( self.solver.check() == z3.unsat )
         ued, ced = resource.getrusage(resource.RUSAGE_SELF), resource.getrusage(resource.RUSAGE_CHILDREN)
-        self.resources[ 'time' ][ 'verification' ] = (ued.ru_utime - ust.ru_utime) + (ced.ru_utime - cst.ru_utime)
+        self.resources[ 'time' ][ 'solving' ] = (ued.ru_utime - ust.ru_utime) + (ced.ru_utime - cst.ru_utime)
 
         if unsat:
             return ( self.info, unsat, None )
@@ -806,11 +806,11 @@ class Oracle():
 
 
     ####
-    # scf
+    # might
     #
-    # execute single counterfactual query
+    # execute might query
     #
-    def scf( self ):
+    def might( self ):
         self.solver.add(
             z3.And(
                 z3.And( self.phi(), self.psi(), z3.Not( self.f() ), self.pi() ),
@@ -821,7 +821,7 @@ class Oracle():
         ust, cst = resource.getrusage(resource.RUSAGE_SELF), resource.getrusage(resource.RUSAGE_CHILDREN)
         unsat = ( self.solver.check() == z3.unsat )
         ued, ced = resource.getrusage(resource.RUSAGE_SELF), resource.getrusage(resource.RUSAGE_CHILDREN)
-        self.resources[ 'time' ][ 'verification' ]  = (ued.ru_utime - ust.ru_utime) + (ced.ru_utime - cst.ru_utime)
+        self.resources[ 'time' ][ 'solving' ]  = (ued.ru_utime - ust.ru_utime) + (ced.ru_utime - cst.ru_utime)
 
         if unsat:
             return ( self.info, not unsat, None )

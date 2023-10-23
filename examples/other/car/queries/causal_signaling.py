@@ -2,7 +2,7 @@ from soid.soidlib import *
 
 from .car import declare, cardinalIDs
 
-soid = Soid( 'causal signaling', counterfactual.single, priority = 2 )
+soid = Soid( 'causal signaling', might, priority = 2 )
 #soid.register( declare )
 
 

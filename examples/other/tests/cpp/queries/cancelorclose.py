@@ -3,7 +3,7 @@ from soid.soidlib import *
 from .mw import declare, cancel, dclose
 
 
-soid = Soid( 'always cancel or close', verification, priority = 4 )
+soid = Soid( 'always cancel or close', would, priority = 4 )
 #soid.register( declare )
 
 

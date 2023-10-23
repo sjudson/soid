@@ -5,7 +5,7 @@ def introduction():
     return f'\n\ta small test of float encodings, should fail...'
 
 
-soid = Soid( 'float test', counterfactual.single, priority = 1 )
+soid = Soid( 'float test', might, priority = 1 )
 
 
 #@soid.register

@@ -3,7 +3,7 @@ from soid.soidlib import *
 from ..mw import declare, cancel
 
 
-soid = Soid( 'never cancel', counterfactual.single, priority = 6, expect = False )
+soid = Soid( 'never cancel', might, priority = 6, expect = False )
 #soid.register( declare )
 
 

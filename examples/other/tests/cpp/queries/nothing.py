@@ -3,7 +3,7 @@ from soid.soidlib import *
 from .mw import declare, nothng
 
 
-soid = Soid( 'nothing', verification, priority = 2 )
+soid = Soid( 'nothing', would, priority = 2 )
 #soid.register( declare )
 
 

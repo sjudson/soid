@@ -3,7 +3,7 @@ from soid.soidlib import *
 from .mw import declare, dopen
 
 
-soid = Soid( 'open door', verification, priority = 3 )
+soid = Soid( 'open door', would, priority = 3 )
 #soid.register( declare )
 
 

@@ -2,7 +2,7 @@ from soid.soidlib import *
 
 from .classify import declare
 
-soid = Soid( 'verify', verification, priority = 1 )
+soid = Soid( 'verify', would, priority = 1 )
 soid.register( declare )
 
 def descriptor():

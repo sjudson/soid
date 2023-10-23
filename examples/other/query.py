@@ -59,7 +59,7 @@ if __name__ == '__main__':
         idx   = 2
         base  = causal_signaling
         path  = paths[ 2 ]
-        query = soidlib.Soid( 'Car Query', soidlib.counterfactual.single )
+        query = soidlib.Soid( 'Car Query', soidlib.verification )
         query.register( base.falsified )
     elif test == 'test.car.swapped':
         idx   = 3

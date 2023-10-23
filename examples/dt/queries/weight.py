@@ -2,7 +2,7 @@ from soid.soidlib import *
 
 from .classify import declare
 
-soid = Soid( 'weight', counterfactual.single, priority = 2 )
+soid = Soid( 'weight', might, priority = 2 )
 soid.register( declare )
 
 def descriptor():

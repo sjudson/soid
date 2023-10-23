@@ -2,7 +2,7 @@ from soid.soidlib import *
 
 from .car import declare, cardinalIDs
 
-soid = Soid( 'away', verification, priority = 5 )
+soid = Soid( 'away', would, priority = 5 )
 #soid.register( declare )
 
 

@@ -11,14 +11,15 @@ import inspect
 
 
 
-_cf = namedtuple( 'counterfactual', [ 'single', 'necessary', 'sufficient' ] )
-_bh = namedtuple( 'behavior', [ 'necessary', 'sufficient' ] )
+#_cf = namedtuple( 'counterfactual', [ 'single', 'necessary', 'sufficient' ] )
+#_bh = namedtuple( 'behavior', [ 'necessary', 'sufficient' ] )
+#counterfactual = _cf( single = 'counterfactual.single', necessary = 'counterfactual.necessary', sufficient = 'counterfactual.sufficient' )
+#behavior       = _bh(                                   necessary = 'behavior.necessary',       sufficient = 'behavior.sufficient' )
 
-introduction   = 'introduction'
-verification   = 'verification'
-counterfactual = _cf( single = 'counterfactual.single', necessary = 'counterfactual.necessary', sufficient = 'counterfactual.sufficient' )
-behavior       = _bh(                                   necessary = 'behavior.necessary',       sufficient = 'behavior.sufficient' )
-agent          = 'agent'
+introduction = 'introduction'
+would = 'would'
+might = 'might'
+agent = 'agent'
 
 
 
@@ -673,7 +674,7 @@ class Soid():
 
         self.query_name = query_name
         self.query_type = query_type
-        self.__synth = ( query_type not in [ verification, counterfactual.single ] )
+        self.__synth = ( query_type not in [ would, might ] )
 
         self.priority = priority
         self.skip     = skip

@@ -24,7 +24,7 @@ def run( test, model ):
         result    = eval( search[ 0 ] )
         resources = eval( search[ 1 ] )
 
-        runs.append( ( result, resources[ 'time' ][ 'symbolic' ], resources[ 'time' ][ 'verification' ], resources[ 'time' ][ 'total' ], resources[ 'paths' ] ) )
+        runs.append( ( result, resources[ 'time' ][ 'symbolic' ], resources[ 'time' ][ 'solving' ], resources[ 'time' ][ 'total' ], resources[ 'paths' ] ) )
 
         return reduce( lambda acc, r: ( acc[ 0 ] and r[ 1 ][ 0 ],
                                         amend( acc[ 1 ], r[ 0 ], r[ 1 ][ 1 ] ),

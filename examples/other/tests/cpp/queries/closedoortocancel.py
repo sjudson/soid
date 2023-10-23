@@ -3,7 +3,7 @@ from soid.soidlib import *
 from .mw import declare, cancel
 
 
-soid = Soid( 'close door to cancel', verification, priority = 5 )
+soid = Soid( 'close door to cancel', would, priority = 5 )
 #soid.register( declare )
 
 

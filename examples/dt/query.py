@@ -12,11 +12,11 @@ if __name__ == '__main__':
     if test == 'verify':
         idx   = 1
         base  = verify
-        query = soidlib.Soid( 'Decision Tree Query', soidlib.verification )
+        query = soidlib.Soid( 'Decision Tree Query', soidlib.would )
     else:
         idx   = 2
         base  = weight
-        query = soidlib.Soid( 'Decision Tree Query', soidlib.counterfactual.single )
+        query = soidlib.Soid( 'Decision Tree Query', soidlib.might )
         query.register( base.falsified )
 
     query.register( base.declare )
