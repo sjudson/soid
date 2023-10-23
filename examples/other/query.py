@@ -19,65 +19,65 @@ if __name__ == '__main__':
         idx   = 1
         base  = testfloat
         path  = paths[ 0 ]
-        query = soidlib.Soid( 'Float Test Query', soidlib.counterfactual.single )
+        query = soidlib.Soid( 'Float Test Query', soidlib.might )
     elif test == 'test.mw.cancel':
         idx   = 1
         base  = alwayscancel
         path  = paths[ 1 ]
-        query = soidlib.Soid( 'Microwave Query', soidlib.verification )
+        query = soidlib.Soid( 'Microwave Query', soidlib.would )
     elif test == 'test.mw.nothing':
         idx   = 2
         base  = nothing
         path  = paths[ 1 ]
-        query = soidlib.Soid( 'Microwave Query', soidlib.verification )
+        query = soidlib.Soid( 'Microwave Query', soidlib.would )
     elif test == 'test.mw.open':
         idx   = 3
         base  = opendoor
         path  = paths[ 1 ]
-        query = soidlib.Soid( 'Microwave Query', soidlib.verification )
+        query = soidlib.Soid( 'Microwave Query', soidlib.would )
     elif test == 'test.mw.options':
         idx   = 4
         base  = cancelorclose
         path  = paths[ 1 ]
-        query = soidlib.Soid( 'Microwave Query', soidlib.verification )
+        query = soidlib.Soid( 'Microwave Query', soidlib.would )
     elif test == 'test.mw.close':
         idx   = 5
         base  = closedoortocancel
         path  = paths[ 1 ]
-        query = soidlib.Soid( 'Microwave Query', soidlib.verification )
+        query = soidlib.Soid( 'Microwave Query', soidlib.would )
     elif test == 'test.mw.never':
         idx   = 6
         base  = nevercancel
         path  = paths[ 1 ]
-        query = soidlib.Soid( 'Microwave Query', soidlib.counterfactual.single )
+        query = soidlib.Soid( 'Microwave Query', soidlib.might )
     elif test == 'test.car.confirm':
         idx   = 1
         base  = confirm_observations
         path  = paths[ 2 ]
-        query = soidlib.Soid( 'Car Query', soidlib.verification )
+        query = soidlib.Soid( 'Car Query', soidlib.would )
     elif test == 'test.car.causal':
         idx   = 2
         base  = causal_signaling
         path  = paths[ 2 ]
-        query = soidlib.Soid( 'Car Query', soidlib.verification )
+        query = soidlib.Soid( 'Car Query', soidlib.would )
         query.register( base.falsified )
     elif test == 'test.car.swapped':
         idx   = 3
         base  = roles_swapped
         path  = paths[ 2 ]
-        query = soidlib.Soid( 'Car Query', soidlib.counterfactual.single )
+        query = soidlib.Soid( 'Car Query', soidlib.might )
         query.register( base.falsified )
     elif test == 'test.car.front':
         idx   = 4
         base  = in_front
         path  = paths[ 2 ]
-        query = soidlib.Soid( 'Car Query', soidlib.counterfactual.single )
+        query = soidlib.Soid( 'Car Query', soidlib.might )
         query.register( base.falsified )
     elif test == 'test.car.away':
         idx   = 5
         base  = away
         path  = paths[ 2 ]
-        query = soidlib.Soid( 'Car Query', soidlib.counterfactual.single )
+        query = soidlib.Soid( 'Car Query', soidlib.might )
         query.register( base.falsified )
 
     query.register( base.declare )
