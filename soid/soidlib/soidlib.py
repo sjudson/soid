@@ -735,11 +735,10 @@ class Soid():
                 exts = None
                 for v in vs:
                     if hasattr( v, 'soid_isbool' ) and v.soid_isbool:
-                        varg,  _ = _type_resolve( ( v, ))
-                        tbool, _ = _type_resolve( ( True, v ) )
-                        fbool, _ = _type_resolve( ( False, v ) )
+                        tbool, _ = _type_resolve( ( v, True ) )
+                        fbool, _ = _type_resolve( ( v, False ) )
 
-                        const = Or( Equal( varg[ 0 ], tbool[ 0 ] ), Equal( varg[ 0 ], fbool[ 0 ] ) )
+                        const = Or( Equal( tbool[ 0 ], tbool[ 1 ] ), Equal( fbool[ 0 ], fbool[ 1 ] ) )
                         exts = And( exts, const ) if exts != None else const
 
                 return exts
