@@ -122,7 +122,7 @@
     }
   },
   "query": {
-    "is_factual": false,
+    "is_universal": false,
     "is_existential": true,
     "behavior": "stop"
   },

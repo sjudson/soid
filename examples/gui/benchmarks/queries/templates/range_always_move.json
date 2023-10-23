@@ -111,7 +111,7 @@
     }
   },
   "query": {
-    "is_factual": true,
+    "is_universal": true,
     "is_existential": false,
     "behavior": "move"
   },
