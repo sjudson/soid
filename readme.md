@@ -2,7 +2,7 @@
 
 ##### docker command
 
-The easiest way to get setup with soid is to use Docker. You'll need to install both the [Docker Engine](https://docs.docker.com/engine/install/) and the [Docker Compose plugin](https://docs.docker.com/compose/install/). You can then just download `docker-compose.yml` (no need to clone the whole repository) and run the appropriate `docker compose run ...` command below. If the download fails, you might be having [authentication problems](https://docs.gitlab.com/ee/user/packages/container_registry/authenticate_with_container_registry.html).
+If you have been granted access, the easiest way to get setup with soid is to use Docker. You'll need to install both the [Docker Engine](https://docs.docker.com/engine/install/) and the [Docker Compose plugin](https://docs.docker.com/compose/install/). You can then just download `docker-compose.yml` (no need to clone the whole repository) and run the appropriate `docker compose run ...` command below. If the download fails, you might be having [authentication problems](https://docs.gitlab.com/ee/user/packages/container_registry/authenticate_with_container_registry.html).
 
 To run the GUI, do:
 ```shell
