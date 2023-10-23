@@ -59,25 +59,25 @@ if __name__ == '__main__':
         idx   = 2
         base  = causal_signaling
         path  = paths[ 2 ]
-        query = soidlib.Soid( 'Car Query', soidlib.would )
+        query = soidlib.Soid( 'Car Query', soidlib.might )
         query.register( base.falsified )
     elif test == 'test.car.swapped':
         idx   = 3
         base  = roles_swapped
         path  = paths[ 2 ]
-        query = soidlib.Soid( 'Car Query', soidlib.might )
+        query = soidlib.Soid( 'Car Query', soidlib.would )
         query.register( base.falsified )
     elif test == 'test.car.front':
         idx   = 4
         base  = in_front
         path  = paths[ 2 ]
-        query = soidlib.Soid( 'Car Query', soidlib.might )
+        query = soidlib.Soid( 'Car Query', soidlib.would )
         query.register( base.falsified )
     elif test == 'test.car.away':
         idx   = 5
         base  = away
         path  = paths[ 2 ]
-        query = soidlib.Soid( 'Car Query', soidlib.might )
+        query = soidlib.Soid( 'Car Query', soidlib.would )
         query.register( base.falsified )
 
     query.register( base.declare )

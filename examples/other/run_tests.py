@@ -37,14 +37,14 @@ def execute( tests ):
     add = ''
     for test in tests:
         results = run( test )
-        add += f'\, {test} \, & \, {results[ 1 ]:.3e} \, & \, {results[ 2 ]:.3e} \, & \, {results[ 3 ]:.3e} \, & \, {results[ 4 ]} \, \\'
+        add += f'\, {test} \, & \, {results[ 1 ]:.3e} \, & \, {results[ 2 ]:.3e} \, & \, {results[ 3 ]:.3e} \, & \, {results[ 4 ]} \, \\\\'
 
     return add
 
 
 if __name__ == '__main__':
 
-    base = '''
+        base = '''
 \documentclass{article}
 
 \\usepackage{amsmath}
@@ -53,21 +53,21 @@ if __name__ == '__main__':
 
 \\begin{document}
 
-\begin{table}[!t]
+\\begin{table}[!t]
 \centering
-\tiny
-\begin{tabular}{|l || c | c | c | c |}
+\\tiny
+\\begin{tabular}{|l || c | c | c | c |}
 \hline
-\, name \, & \, symbolic (s) \, & \, solving (s) \, & \, total (s) \, & \, paths \, \\
+\, name \, & \, symbolic (s) \, & \, solving (s) \, & \, total (s) \, & \, paths \, \\\\
 \hline
 '''
     base += execute( [ 'test.float.basic',
                        'test.mw.cancel', 'test.mw.nothing', 'test.mw.open', 'test.mw.options', 'test.mw.close', 'test.mw.never',
-                       'test.car.confirm', 'test.car.causal', 'test.car.swapped', 'test.car.front', 'test.car.away' ] )
+		       'test.car.confirm', 'test.car.causal', 'test.car.swapped', 'test.car.front', 'test.car.away' ] )
     base += '''
 \hline
 \end{tabular}
-\vspace{2mm}
+\\vspace{2mm}
 \caption{Additional Benchmarks (reported avg. $n = 10$).}
 \label{tbl:ab}
 \end{table}
