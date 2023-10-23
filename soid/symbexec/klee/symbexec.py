@@ -83,7 +83,7 @@ class KleeSymbExec( SymbExec ):
                 raise Exception('Unable to parse symbolic execution output')
             if len( path_components ) == 1:
                 paths.append( path_components[ 0 ] )
-                break
+                continue
 
             paths.append( z3.And( *path_components ) )
 
