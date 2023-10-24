@@ -298,7 +298,12 @@ class Oracle():
     #
     def reset( self ):
 
-        z3.Z3_reset_memory()
+        # don't reset memory, it plays poorly with soid-gui, and is apparently
+        # risky to do when in working through a "managed interface" like z3py
+        #
+        # https://github.com/Z3Prover/z3/discussions/4992#discussioncomment-335284 
+        #
+        #z3.Z3_reset_memory()
 
         self.synth  = None
         self.solver = None
