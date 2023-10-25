@@ -150,7 +150,7 @@ def would_pp( info, unsat, model = None, resources = None ):
 #
 # pretty print output of might query
 #
-def scf_pp( info, sat, model = None, resources = None ):
+def might_pp( info, sat, model = None, resources = None ):
     ex = soidlib.symbols.true if info[ 'expect' ] else soidlib.symbols.false
     eq = ( sat == info[ 'expect' ] )
 
