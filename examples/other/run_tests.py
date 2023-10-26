@@ -26,11 +26,11 @@ def run( test ):
 
         runs.append( ( result, resources[ 'time' ][ 'symbolic' ], resources[ 'time' ][ 'solving' ], resources[ 'time' ][ 'total' ], resources[ 'paths' ] ) )
 
-        return reduce( lambda acc, r: ( acc[ 0 ] and r[ 1 ][ 0 ],
-                                        amend( acc[ 1 ], r[ 0 ], r[ 1 ][ 1 ] ),
-                                        amend( acc[ 2 ], r[ 0 ], r[ 1 ][ 2 ] ),
-                                        amend( acc[ 3 ], r[ 0 ], r[ 1 ][ 3 ] ),
-                                        r[ 1 ][ 4 ] ), enumerate( runs ), ( True, 0.0, 0.0, 0.0, 0 ) )
+    return reduce( lambda acc, r: ( acc[ 0 ] and r[ 1 ][ 0 ],
+                                    amend( acc[ 1 ], r[ 0 ], r[ 1 ][ 1 ] ),
+                                    amend( acc[ 2 ], r[ 0 ], r[ 1 ][ 2 ] ),
+                                    amend( acc[ 3 ], r[ 0 ], r[ 1 ][ 3 ] ),
+                                    r[ 1 ][ 4 ] ), enumerate( runs ), ( True, 0.0, 0.0, 0.0, 0 ) )
 
 
 def execute( tests ):
