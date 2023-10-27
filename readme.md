@@ -43,41 +43,52 @@ for the crash.
 
 First you'll need to clone the repository with submodules:
 ```shell
-$ git clone --recurse-submodules -j8 git@gitlab.com:rose-yale/soid.git
+$ git clone --recurse-submodules -j8 git@github.com:sjudson/soid.git
 ```
 
 Then, run on debian/ubuntu:
 ```shell
-$ sudo apt-get install build-essential \
-                       curl \
-                       libcap-dev \
-                       git \
-                       cmake \
-                       libncurses5-dev \
-                       python2-minimal \
-                       unzip \
-                       libtcmalloc-minimal4 \
-                       libgoogle-perftools-dev \
-                       libsqlite3-dev \
-                       doxygen \
-                       python3 \
-                       python3-pip \
-                       python3-dev \
-                       virtualenv \
-                       gcc-multilib \
-                       g++-multilib \
-                       z3 \
-                       clang-11 \
-                       llvm-11 \
-                       llvm-11-dev \
-                       llvm-11-tools \
-                       m4 \
-                       bison \
-                       flex \
-                       bc \
-                       libboost-dev \
-                       unzip \
-
+$ sudo apt-get install -y build-essential \
+                        wget \
+                        curl \
+                        libcap-dev \
+                        git \
+                        cmake \
+                        libncurses5-dev \
+                        python2-minimal \
+                        unzip \
+                        libtcmalloc-minimal4 \
+                        libgoogle-perftools-dev \
+                        libsqlite3-dev \
+                        doxygen \
+                        python3 \
+                        python3-pip \
+                        python3-dev \
+                        virtualenv \
+                        gcc-multilib \
+                        g++-multilib \
+                        z3 \
+                        clang-11 \
+                        llvm-11 \
+                        llvm-11-dev \
+                        llvm-11-tools \
+                        m4 \
+                        bison \
+                        flex \
+                        bc \
+                        libboost-dev \
+                        unzip \
+                        libtool \
+                        freeglut3-dev \
+                        libglib2.0-0 \
+                        libsm6 \
+                        libxrender1 \
+                        libxext6 \
+                        libgl1-mesa-glx \
+                        ffmpeg \
+                        npm \
+                        xvfb \
+                        mesa-utils
 ```
 After this completes, all that is left is to run the dependency install script from within the `deps` folder of the `soid` repo:
 ```
@@ -103,7 +114,7 @@ $ source ./deps/venv/bin/activate
 ```
 Then invoke the `soid` tool using the cli interface, specifying the source program makefile `-m` and the directory containing the python module with the queries `-qs`, e.g.,:
 ```
-$ ./scripts/soidcli -m ./examples/car/defensive/Makefile -qs ./examples/car/queries
+$ ./scripts/soidcli -m ./examples/other/car/defensive/Makefile -qs ./examples/other/car/queries
 ```
 will execute the car example.
 
