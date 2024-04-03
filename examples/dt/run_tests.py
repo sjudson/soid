@@ -6,7 +6,7 @@ from functools import reduce
 ITERS = 10
 
 def mark( tval ):
-    return '\cmark' if tval else '\\xmark'
+    return r'\cmark' if tval else r'\\xmark'
 
 def amend( base, i, nxt ):
     return ( base * i + nxt ) / ( i + 1.0 )
@@ -47,7 +47,7 @@ def execute( tests ):
 
 if __name__ == '__main__':
 
-    base = '''
+    base = r'''
 \documentclass{article}
 
 \\usepackage{amsmath}
@@ -78,12 +78,12 @@ $$\\begin{tabularx}{\\textwidth}{c *{5}{Y}}
 
     base += execute(
         [
-            ( 'verify', '$\\varphi_{fact}$, \\textit{low risk?}', '\\fprop' ),
-            ( 'weight', '$\\varphi^* \equiv \\varphi_{fact}[(\\texttt{height} = 54.0) \mapsto \\top]$, \\textit{ever high risk?}', '\cprop' ),
+            ( 'verify', r'$\\varphi_{fact}$, \\textit{low risk?}', 'r\\fprop' ),
+            ( 'weight', r'$\\varphi^* \equiv \\varphi_{fact}[(\\texttt{height} = 54.0) \mapsto \\top]$, \\textit{ever high risk?}', r'\cprop' ),
         ]
     )
 
-    base += '''
+    base += r'''
 \\bottomrule
 \end{tabularx}$$
 

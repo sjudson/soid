@@ -6,7 +6,7 @@ from functools import reduce
 ITERS = 10
 
 def mark( tval ):
-    return '\cmark' if tval else '\\xmark'
+    return r'\cmark' if tval else r'\\xmark'
 
 def amend( base, i, nxt ):
     return ( base * i + nxt ) / ( i + 1.0 )
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     base += execute( [ 'test.float.basic',
                        'test.mw.cancel', 'test.mw.nothing', 'test.mw.open', 'test.mw.options', 'test.mw.close', 'test.mw.never',
 		       'test.car.confirm', 'test.car.causal', 'test.car.swapped', 'test.car.front', 'test.car.away' ] )
-    base += '''
+    base += r'''
 \hline
 \end{tabular}
 \\vspace{2mm}

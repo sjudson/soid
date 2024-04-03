@@ -5,7 +5,7 @@ from functools import reduce
 ITERS = 10
 
 def mark( tval ):
-    return '\cmark' if tval else '\\xmark'
+    return r'\cmark' if tval else r'\\xmark'
 
 def amend( base, i, nxt ):
     return ( base * i + nxt ) / ( i + 1.0 )
@@ -53,7 +53,7 @@ def execute( tests ):
 
 if __name__ == '__main__':
 
-    base = '''
+    base = r'''
 \documentclass{article}
 
 \\usepackage{amsmath}
@@ -84,17 +84,17 @@ $$\\begin{tabularx}{\\textwidth}{c *{5}{Y}}
 
     base += execute(
         [
-            ( 'moved', '$\\varphi_{fact}$, \\textit{moved?}', '\\fprop' ),
-            ( 'always_move', '$\\varphi^* \equiv \\varphi_{fact}[(\\texttt{agent1\_signal\_choice} = 2) \mapsto (\\texttt{agent1\_signal\_choice} \in \{ 0, \, 1, \, 2 \})]$, \\textit{always move?}', '\cprop' ),
-            ( 'ever_not_move', '$\\varphi^* \equiv \\varphi_{fact}[(\\texttt{agent1\_signal\_choice} = 2) \mapsto (\\texttt{agent1\_signal\_choice} \in \{ 0, \, 1, \, 2 \})]$, \\textit{ever not move?}', '\cprop' ),
-            ( 'range_always_move', '$\\varphi^*[(\\texttt{agent1\_pos\_x} = 1.376) \mapsto (1.0 \leq \\texttt{agent1\_pos\_x} \leq 1.5) ]$, \\textit{always move?}', '\cprop' ),
-            ( 'range_ever_not_move', '$\\varphi^*[(\\texttt{agent1\_pos\_x} = 1.376) \mapsto (1.0 \leq \\texttt{agent1\_pos\_x} \leq 1.5) ]$, \\textit{ever not move?}', '\cprop' ),
-            ( 'car_always_move', '$\\varphi^* \land (\\texttt{agent2\_pos\_x} = 1.316) \land (\\texttt{agent2\_pos\_y} = 0.378) \land \cdots$, \\textit{always move?}', '\cprop' ),
-            ( 'car_ever_not_move', '$\\varphi^* \land (\\texttt{agent2\_pos\_x} = 1.316) \land (\\texttt{agent2\_pos\_y} = 0.378) \land \cdots$, \\textit{ever not move?}', '\cprop' ),
+            ( 'moved', r'$\\varphi_{fact}$, \\textit{moved?}', r'\\fprop' ),
+            ( 'always_move', r'$\\varphi^* \equiv \\varphi_{fact}[(\\texttt{agent1\_signal\_choice} = 2) \mapsto (\\texttt{agent1\_signal\_choice} \in \{ 0, \, 1, \, 2 \})]$, \\textit{always move?}', r'\cprop' ),
+            ( 'ever_not_move', '$\\varphi^* \equiv \\varphi_{fact}[(\\texttt{agent1\_signal\_choice} = 2) \mapsto (\\texttt{agent1\_signal\_choice} \in \{ 0, \, 1, \, 2 \})]$, \\textit{ever not move?}', r'\cprop' ),
+            ( 'range_always_move', r'$\\varphi^*[(\\texttt{agent1\_pos\_x} = 1.376) \mapsto (1.0 \leq \\texttt{agent1\_pos\_x} \leq 1.5) ]$, \\textit{always move?}', r'\cprop' ),
+            ( 'range_ever_not_move', r'$\\varphi^*[(\\texttt{agent1\_pos\_x} = 1.376) \mapsto (1.0 \leq \\texttt{agent1\_pos\_x} \leq 1.5) ]$, \\textit{ever not move?}', r'\cprop' ),
+            ( 'car_always_move', r'$\\varphi^* \land (\\texttt{agent2\_pos\_x} = 1.316) \land (\\texttt{agent2\_pos\_y} = 0.378) \land \cdots$, \\textit{always move?}', r'\cprop' ),
+            ( 'car_ever_not_move', r'$\\varphi^* \land (\\texttt{agent2\_pos\_x} = 1.316) \land (\\texttt{agent2\_pos\_y} = 0.378) \land \cdots$, \\textit{ever not move?}', r'\cprop' ),
         ]
     )
 
-    base += '''
+    base += r'''
 \\bottomrule
 \end{tabularx}$$
 

@@ -23,7 +23,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
                         libsqlite3-dev \
                         doxygen \
                         python3 \
-                        python3-pip \
+			python3-pip \
                         python3-dev \
                         virtualenv \
                         gcc-multilib \
@@ -50,6 +50,10 @@ RUN DEBIAN_FRONTEND=noninteractive \
                         npm \
                         xvfb \
                         mesa-utils \
+			gfortran \
+			libopenblas-dev \
+			pkg-config \
+			libopenblas64-dev \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
@@ -87,8 +91,9 @@ RUN ln -s /usr/src/soid/deps/prebuilt/klee-uclibc-3 /usr/src/soid/deps/klee-ucli
 RUN ln -s /usr/src/soid/deps/prebuilt/klee-float /usr/src/soid/deps/klee-float
 
 # install python dependencies
-RUN pip install --no-cache-dir -r /usr/src/soid/requirements.txt && \
-    pip install pyglet==1.5.15
+RUN pip install pyglet==1.5.15 \
+    pip install numpy==1.26.0 \
+    pip install --no-cache-dir -r /usr/src/soid/requirements.txt
 
 # install soid
 RUN pip install -e .
