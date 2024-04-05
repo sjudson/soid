@@ -6,7 +6,7 @@ from functools import reduce
 ITERS = 10
 
 def mark( tval ):
-    return r'\cmark' if tval else r'\\xmark'
+    return r'\cmark' if tval else r'\xmark'
 
 def amend( base, i, nxt ):
     return ( base * i + nxt ) / ( i + 1.0 )
@@ -37,7 +37,7 @@ def execute( tests ):
     add = ''
     for test in tests:
         results = run( test )
-        add += f'\, {test} \, & \, {results[ 1 ]:.3e} \, & \, {results[ 2 ]:.3e} \, & \, {results[ 3 ]:.3e} \, & \, {results[ 4 ]} \, \\\\'
+        add += rf'\, {test} \, & \, {results[ 1 ]:.3e} \, & \, {results[ 2 ]:.3e} \, & \, {results[ 3 ]:.3e} \, & \, {results[ 4 ]} \, \\\n'
 
     return add
 
@@ -47,18 +47,18 @@ if __name__ == '__main__':
     base = r'''
 \documentclass{article}
 
-\\usepackage{amsmath}
-\\usepackage{amssymb}
-\\usepackage{fullpage}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{fullpage}
 
-\\begin{document}
+\begin{document}
 
-\\begin{table}[!t]
+\begin{table}[!t]
 \centering
-\\tiny
-\\begin{tabular}{|l || c | c | c | c |}
+\tiny
+\begin{tabular}{|l || c | c | c | c |}
 \hline
-\, name \, & \, symbolic (s) \, & \, solving (s) \, & \, total (s) \, & \, paths \, \\\\
+\, name \, & \, symbolic (s) \, & \, solving (s) \, & \, total (s) \, & \, paths \, \\
 \hline
 '''
     base += execute( [ 'test.float.basic',
@@ -67,7 +67,7 @@ if __name__ == '__main__':
     base += r'''
 \hline
 \end{tabular}
-\\vspace{2mm}
+\vspace{2mm}
 \caption{Additional Benchmarks (reported avg. $n = 10$).}
 \label{tbl:ab}
 \end{table}

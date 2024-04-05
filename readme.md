@@ -2,7 +2,7 @@
 
 ##### docker command
 
-If you have been granted access, the easiest way to get setup with soid is to use Docker. You'll need to install both the [Docker Engine](https://docs.docker.com/engine/install/) and the [Docker Compose plugin](https://docs.docker.com/compose/install/). You can then just download `docker-compose.yml` (no need to clone the whole repository) and run the appropriate `docker compose run ...` command below. If the download fails, you might be having [authentication problems](https://docs.gitlab.com/ee/user/packages/container_registry/authenticate_with_container_registry.html).
+If you have the soid Docker image, to get started with it you'll need to install both the [Docker Engine](https://docs.docker.com/engine/install/) and the [Docker Compose plugin](https://docs.docker.com/compose/install/). You can then just [load the image](https://docs.docker.com/reference/cli/docker/image/load/), download `docker-compose.yml` (no need to clone the whole repository), and run the appropriate `docker compose run ...` command below.
 
 To run the GUI, do:
 ```shell
@@ -19,7 +19,6 @@ instead. You can also spin up the hardcoded broadside crash scenario from the pa
 $ docker compose run soid-gui-crash
 ```
 as well.
-
 
 To work directly with soid, or to modify the GUI, you first need to spin the image up, and then get a shell.
 ```shell

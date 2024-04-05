@@ -6,7 +6,7 @@ from functools import reduce
 ITERS = 10
 
 def mark( tval ):
-    return r'\cmark' if tval else r'\\xmark'
+    return r'\cmark' if tval else r'\xmark'
 
 def amend( base, i, nxt ):
     return ( base * i + nxt ) / ( i + 1.0 )
@@ -50,41 +50,41 @@ if __name__ == '__main__':
     base = r'''
 \documentclass{article}
 
-\\usepackage{amsmath}
-\\usepackage{amssymb}
-\\usepackage{pifont}
-\\newcommand{\cmark}{\ding{52}}%
-\\newcommand{\\xmark}{\ding{56}}%
-\\usepackage{tabularx, booktabs}
-\\newcolumntype{Y}{>{\centering\\arraybackslash}X}
-\\usepackage{fullpage}
-\\usepackage{hhline}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{pifont}
+\newcommand{\cmark}{\ding{52}}%
+\newcommand{\xmark}{\ding{56}}%
+\usepackage{tabularx, booktabs}
+\newcolumntype{Y}{>{\centering\arraybackslash}X}
+\usepackage{fullpage}
+\usepackage{hhline}
 
-\\newcommand{\counterfactual}{\ensuremath{%
-    \\mathrel{\Box\kern-1.5pt\\raise0.8pt\hbox{\\vspace{10pt}$\mathord{\\rightarrow}$}}}}
-\\newcommand{\\fprop}{\ensuremath{\\to_{\\mathcal{A}, t, \ell}}}
-\\newcommand{\cprop}{\ensuremath{\counterfactual_{\\mathcal{A}, t^*, \ell}}}
+\newcommand{\counterfactual}{\ensuremath{%
+    \mathrel{\Box\kern-1.5pt\raise0.8pt\hbox{\vspace{10pt}$\mathord{\rightarrow}$}}}}
+\newcommand{\fprop}{\ensuremath{\to_{\mathcal{A}, t, \ell}}}
+\newcommand{\cprop}{\ensuremath{\counterfactual_{\mathcal{A}, t^*, \ell}}}
 
-\\begin{document}
+\begin{document}
 
 \scriptsize
 
-$$\\begin{tabularx}{\\textwidth}{c *{5}{Y}}
+$$\begin{tabularx}{\textwidth}{c *{5}{Y}}
 
-\\toprule
-    \multicolumn{2}{c|}{} & \multicolumn{3}{c|}{\\vspace{1mm}\\underline{timings (avg.~$n = 10$)}} & \multicolumn{1}{c}{}\\\\
-    \\textbf{model} & \\textbf{output} & \\textbf{symbolic ($s$)} & \\textbf{solving ($s$)} & \\textbf{total ($s$)} & \\textbf{paths} \\\\[2pt]\midrule
+\toprule
+    \multicolumn{2}{c|}{} & \multicolumn{3}{c|}{\vspace{1mm}\underline{timings (avg.~$n = 10$)}} & \multicolumn{1}{c}{}\\
+    \textbf{model} & \textbf{output} & \textbf{symbolic ($s$)} & \textbf{solving ($s$)} & \textbf{total ($s$)} & \textbf{paths} \\[2pt]\midrule
 '''
 
     base += execute(
         [
-            ( 'verify', r'$\\varphi_{fact}$, \\textit{low risk?}', 'r\\fprop' ),
-            ( 'weight', r'$\\varphi^* \equiv \\varphi_{fact}[(\\texttt{height} = 54.0) \mapsto \\top]$, \\textit{ever high risk?}', r'\cprop' ),
+            ( 'verify', r'$\varphi_{fact}$, \textit{low risk?}', r'\fprop' ),
+            ( 'weight', r'$\varphi^* \equiv \varphi_{fact}[(\texttt{height} = 54.0) \mapsto \top]$, \textit{ever high risk?}', r'\cprop' ),
         ]
     )
 
     base += r'''
-\\bottomrule
+\bottomrule
 \end{tabularx}$$
 
 \end{document}
